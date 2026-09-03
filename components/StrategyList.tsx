@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Check, Copy } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 type Strategy = {
   id: string;
@@ -22,16 +25,13 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <div className="flex items-center justify-between border-b border-border bg-surface-2 px-3 py-2">
+    <Card className="overflow-hidden py-0">
+      <div className="flex items-center justify-between border-b border-border bg-muted px-3 py-2">
         <span className="truncate text-sm font-medium">{strategy.title}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="shrink-0 rounded px-2 py-1 text-xs text-muted hover:bg-surface hover:text-foreground"
-        >
+        <Button variant="ghost" size="sm" onClick={handleCopy} className="shrink-0 text-xs">
+          {copied ? <Check /> : <Copy />}
           {copied ? "Copied" : "Copy"}
-        </button>
+        </Button>
       </div>
       <SyntaxHighlighter
         language="pine"
@@ -46,7 +46,7 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
       >
         {strategy.code}
       </SyntaxHighlighter>
-    </div>
+    </Card>
   );
 }
 
@@ -54,7 +54,7 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
 export function StrategyList({ strategies }: { strategies: Strategy[] }) {
   if (strategies.length === 0) {
     return (
-      <p className="text-sm text-muted">
+      <p className="text-sm text-muted-foreground">
         No saved strategies yet. Save a script from the chat with the
         &quot;Save strategy&quot; button on any code block.
       </p>

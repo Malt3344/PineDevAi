@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { convertToModelMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { getApprovedUser } from "@/lib/gate";
-import { checkDailyCap, DAILY_MESSAGE_CAP } from "@/lib/daily-cap";
+import { checkDailyCap } from "@/lib/daily-cap";
 import { isMessageTooLong, MAX_MESSAGE_LENGTH } from "@/lib/message-limits";
 import { insertMessage } from "@/lib/messages";
 import { setInitialTitleIfEmpty } from "@/lib/conversations";
@@ -88,12 +88,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   }
 
-  // 3. Check the daily cap before persisting or calling the model.
-  const cap = await checkDailyCap(db, user.id);
+  // 3. Check the daily cap before persisting or calling the model. Paid
+  // subscribers get a higher cap — checkDailyCap looks that up itself.
+  const cap = await checkDailyCap(db, user.id, user.subscriptionStatus);
   if (!cap.allowed) {
     return NextResponse.json(
       {
-        error: `You have reached today's limit of ${DAILY_MESSAGE_CAP} messages. Please try again tomorrow.`,
+        error: `You have reached today's limit of ${cap.cap} messages. Please try again tomorrow.`,
       },
       { status: 429 },
     );

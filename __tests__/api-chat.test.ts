@@ -53,7 +53,11 @@ function makeRequest(body: unknown) {
   });
 }
 
-const approvedUser = { id: "real-user-id", email: "real@example.com" };
+const approvedUser = {
+  id: "real-user-id",
+  email: "real@example.com",
+  subscriptionStatus: "free" as const,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -152,6 +156,13 @@ describe("POST /api/chat", () => {
     expect(call.modelId).toBe("claude-sonnet-4-6");
     expect(call.messages).toBeDefined();
     expect(typeof call.onFinish).toBe("function");
+
+    // The daily cap is checked against this user's actual plan.
+    expect(checkDailyCap).toHaveBeenCalledWith(
+      expect.anything(),
+      "real-user-id",
+      "free",
+    );
   });
 
   it("saves the assistant message via onFinish with the correct conversation, user and role", async () => {

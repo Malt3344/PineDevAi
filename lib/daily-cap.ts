@@ -1,14 +1,23 @@
 import { and, count, eq, gte } from "drizzle-orm";
 import type { db as Db } from "@/lib/db/client";
 import { messages } from "@/lib/db/schema";
+import type { SubscriptionStatus } from "@/lib/gate";
 
 /**
- * Maximum number of user messages a single user may send per day.
+ * Maximum number of user messages a free-plan user may send per day.
  * Best-effort for MVP: a concurrent-request race can exceed this by a
  * message or two, and that is an accepted tradeoff — no transactional
  * rate limiting here.
  */
 export const DAILY_MESSAGE_CAP = 50;
+
+/** Cap for a user with an active paid subscription. */
+export const PAID_DAILY_MESSAGE_CAP = 1000;
+
+/** Picks the right daily cap for a user's current subscription status. */
+export function capForSubscription(status: SubscriptionStatus): number {
+  return status === "active" ? PAID_DAILY_MESSAGE_CAP : DAILY_MESSAGE_CAP;
+}
 
 function startOfTodayUtc(): Date {
   const now = new Date();
@@ -42,6 +51,7 @@ export async function countMessagesToday(
 export type DailyCapCheck = {
   allowed: boolean;
   count: number;
+  cap: number;
 };
 
 /**
@@ -51,7 +61,9 @@ export type DailyCapCheck = {
 export async function checkDailyCap(
   db: typeof Db,
   userId: string,
+  subscriptionStatus: SubscriptionStatus,
 ): Promise<DailyCapCheck> {
+  const cap = capForSubscription(subscriptionStatus);
   const messageCount = await countMessagesToday(db, userId);
-  return { allowed: messageCount < DAILY_MESSAGE_CAP, count: messageCount };
+  return { allowed: messageCount < cap, count: messageCount, cap };
 }

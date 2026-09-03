@@ -22,7 +22,7 @@ export default async function StrategiesPage() {
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-lg font-medium">Saved strategies</h1>
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm text-muted-foreground">
           Scripts you saved from the chat, in one place.
         </p>
         <div className="mt-6">

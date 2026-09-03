@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Bookmark, BookmarkCheck, Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -42,16 +44,19 @@ function CodeBlock({
 
   return (
     <div className="my-3 overflow-hidden rounded-md border border-border">
-      <div className="flex items-center justify-between border-b border-border bg-surface-2 px-3 py-1.5">
-        <span className="font-mono text-xs text-muted">{language || "text"}</span>
+      <div className="flex items-center justify-between border-b border-border bg-muted px-3 py-1.5">
+        <span className="font-mono text-xs text-muted-foreground">{language || "text"}</span>
         <div className="flex items-center gap-1">
           {onSave && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={handleSave}
               disabled={saveStatus === "saving"}
-              className="pd-code-copy rounded px-2 py-1 text-xs text-muted hover:bg-surface hover:text-foreground disabled:opacity-50"
+              className="text-xs"
             >
+              {saveStatus === "saved" ? <BookmarkCheck /> : <Bookmark />}
               {saveStatus === "saved"
                 ? "Saved"
                 : saveStatus === "error"
@@ -59,15 +64,12 @@ function CodeBlock({
                   : saveStatus === "saving"
                     ? "Saving…"
                     : "Save strategy"}
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="pd-code-copy rounded px-2 py-1 text-xs text-muted hover:bg-surface hover:text-foreground"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={handleCopy} className="text-xs">
+            {copied ? <Check /> : <Copy />}
             {copied ? "Copied" : "Copy"}
-          </button>
+          </Button>
         </div>
       </div>
       <SyntaxHighlighter
@@ -110,7 +112,7 @@ export function MessageContent({
 
             if (!match) {
               return (
-                <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[0.85em]">
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em]">
                   {children}
                 </code>
               );

@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { conversations } from "@/lib/db/schema";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { signOutAction } from "@/app/chat/actions";
+import { Button } from "@/components/ui/button";
 
 export default async function ChatLayout({
   children,
@@ -24,17 +25,14 @@ export default async function ChatLayout({
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
         <h1 className="text-lg font-medium">You&apos;re on the waitlist</h1>
-        <p className="mt-3 max-w-sm text-sm text-muted">
+        <p className="mt-3 max-w-sm text-sm text-muted-foreground">
           Thanks for signing up. We&apos;re approving accounts manually while we
           scale up &mdash; you&apos;ll get access soon.
         </p>
         <form action={signOutAction} className="mt-6">
-          <button
-            type="submit"
-            className="text-sm text-muted underline-offset-2 hover:text-foreground hover:underline"
-          >
+          <Button type="submit" variant="ghost">
             Log out
-          </button>
+          </Button>
         </form>
       </main>
     );

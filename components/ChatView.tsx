@@ -3,7 +3,14 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import { ArrowUp } from "lucide-react";
+import { toast } from "sonner";
 import { MessageContent } from "@/components/MessageContent";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** Concatenates a UIMessage's text parts into a single plain-text string. */
 function messageText(message: UIMessage): string {
@@ -62,16 +69,20 @@ export function ChatView({
   /** Saves a code block from an assistant message into the user's strategy library. */
   async function handleSaveCode(code: string) {
     const firstLine = code.split("\n")[0]?.replace(/^\/\/\s*/, "").slice(0, 80);
-    const res = await fetch("/api/strategies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code,
-        title: firstLine || "Untitled strategy",
-        conversationId,
-      }),
-    });
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/strategies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          title: firstLine || "Untitled strategy",
+          conversationId,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save strategy");
+      toast.success("Saved to your strategy library");
+    } catch {
+      toast.error("Could not save that strategy");
       throw new Error("Failed to save strategy");
     }
   }
@@ -79,13 +90,13 @@ export function ChatView({
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-8">
-        <span className="text-xs text-muted">{modelLabel}</span>
+        <Badge variant="secondary">{modelLabel}</Badge>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+      <ScrollArea className="flex-1 px-4 py-6 sm:px-8">
         <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {messages.length === 0 && (
-            <p className="text-center text-sm text-muted">
+            <p className="text-center text-sm text-muted-foreground">
               Describe a strategy to get started.
             </p>
           )}
@@ -95,7 +106,7 @@ export function ChatView({
               className={message.role === "user" ? "flex justify-end" : "flex justify-start"}
             >
               {message.role === "user" ? (
-                <div className="max-w-[85%] whitespace-pre-wrap rounded-lg rounded-tr-sm bg-surface-2 px-4 py-3 text-sm">
+                <div className="max-w-[85%] whitespace-pre-wrap rounded-lg rounded-tr-sm bg-muted px-4 py-3 text-sm">
                   {messageText(message)}
                 </div>
               ) : (
@@ -107,20 +118,20 @@ export function ChatView({
           ))}
           {status === "submitted" && (
             <div className="flex justify-start">
-              <div className="text-sm text-muted">Thinking…</div>
+              <div className="text-sm text-muted-foreground">Thinking…</div>
             </div>
           )}
           {error && (
-            <div className="rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {error.message || "Something went wrong. Please try again."}
             </div>
           )}
         </div>
-      </div>
+      </ScrollArea>
 
       <div className="border-t border-border px-4 py-4 sm:px-8">
-        <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl gap-3">
-          <textarea
+        <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl items-end gap-3">
+          <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -131,15 +142,19 @@ export function ChatView({
             }}
             rows={1}
             placeholder="Describe a strategy, or paste a compiler error…"
-            className="max-h-40 min-h-[44px] flex-1 resize-none rounded-md border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+            className="max-h-40 min-h-11 flex-1 resize-none"
           />
-          <button
-            type="submit"
-            disabled={isBusy || !input.trim()}
-            className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-          >
-            Send
-          </button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button type="submit" size="icon" disabled={isBusy || !input.trim()} />
+              }
+            >
+              <ArrowUp />
+              <span className="sr-only">Send message</span>
+            </TooltipTrigger>
+            <TooltipContent>Send (Enter)</TooltipContent>
+          </Tooltip>
         </form>
       </div>
     </div>

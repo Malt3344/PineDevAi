@@ -29,6 +29,14 @@ export const profiles = pgTable("profile", {
     .references(() => authUsers.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   isApproved: boolean("isApproved").notNull().default(false),
+  // Billing — set only by the Stripe webhook, never by the client.
+  stripeCustomerId: text("stripeCustomerId").unique(),
+  stripeSubscriptionId: text("stripeSubscriptionId").unique(),
+  subscriptionStatus: text("subscriptionStatus", {
+    enum: ["free", "active", "past_due", "canceled"],
+  })
+    .notNull()
+    .default("free"),
   createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
 });
 

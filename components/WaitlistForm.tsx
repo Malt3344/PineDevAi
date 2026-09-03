@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -48,7 +51,7 @@ export function WaitlistForm() {
     return (
       <div
         role="status"
-        className="flex w-full max-w-md items-center justify-center rounded-md border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-accent"
+        className="flex w-full max-w-md items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary"
       >
         {message}
       </div>
@@ -58,27 +61,23 @@ export function WaitlistForm() {
   return (
     <div className="w-full max-w-md">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row" noValidate>
-        <label htmlFor="waitlist-email" className="sr-only">
+        <Label htmlFor="waitlist-email" className="sr-only">
           Email address
-        </label>
-        <input
+        </Label>
+        <Input
           id="waitlist-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="w-full flex-1 rounded-md border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          className="h-11 flex-1"
         />
-        <button
-          type="submit"
-          disabled={status === "loading"}
-          className="shrink-0 rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:opacity-50"
-        >
+        <Button type="submit" size="lg" disabled={status === "loading"} className="h-11 shrink-0">
           {status === "loading" ? "Joining…" : "Join waitlist"}
-        </button>
+        </Button>
       </form>
       {status === "error" && (
-        <p role="alert" className="mt-2 text-sm text-danger">
+        <p role="alert" className="mt-2 text-sm text-destructive">
           {message}
         </p>
       )}
