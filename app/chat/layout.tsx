@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { conversations } from "@/lib/db/schema";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { signOutAction } from "@/app/chat/actions";
+import { startCheckoutAction } from "@/app/chat/account/billing/actions";
 import { Button } from "@/components/ui/button";
 
 export default async function ChatLayout({
@@ -29,7 +30,10 @@ export default async function ChatLayout({
           Thanks for signing up. We&apos;re approving accounts manually while we
           scale up &mdash; you&apos;ll get access soon.
         </p>
-        <form action={signOutAction} className="mt-6">
+        <form action={startCheckoutAction} className="mt-6">
+          <Button type="submit">Skip the wait — upgrade to Pro</Button>
+        </form>
+        <form action={signOutAction} className="mt-3">
           <Button type="submit" variant="ghost">
             Log out
           </Button>

@@ -1,26 +1,7 @@
 import Link from "next/link";
-import { WaitlistForm } from "@/components/WaitlistForm";
-import { Card } from "@/components/ui/card";
+import { ArrowRight } from "lucide-react";
+import { LandingDemo } from "@/components/LandingDemo";
 import { Button } from "@/components/ui/button";
-
-// Static example output shown in the "In practice" section — not generated
-// at request time, just illustrative markup.
-const MOCK_SCRIPT = `//@version=6
-strategy("ORB Breakout", overlay=true)
-
-sessionStart = "0930-0935"
-inSession = not na(time(timeframe.period, sessionStart))
-
-var float orbHigh = na
-var float orbLow = na
-
-if inSession
-    orbHigh := high
-    orbLow := low
-else if not na(orbHigh) and close > orbHigh
-    strategy.entry("Long", strategy.long)
-else if not na(orbLow) and close < orbLow
-    strategy.entry("Short", strategy.short)`;
 
 const HOW_IT_WORKS = [
   {
@@ -62,10 +43,23 @@ export default function Home() {
             you. Paste a compiler error and it ships a corrected script back &mdash;
             no forums, no guesswork.
           </p>
-          <div className="mt-10 flex justify-center">
-            <WaitlistForm />
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Button size="lg" nativeButton={false} render={<Link href="/login" />}>
+              Get Started
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              nativeButton={false}
+              render={<Link href="/pricing" />}
+            >
+              View Pricing
+              <ArrowRight />
+            </Button>
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">
+
+          <p className="mt-10 text-xs text-muted-foreground">
             Pick between multiple Claude models, and save the strategies you
             like to a personal library.
           </p>
@@ -95,24 +89,7 @@ export default function Home() {
             <h2 className="text-center text-sm font-medium tracking-wide text-muted-foreground uppercase">
               In practice
             </h2>
-            <Card className="mt-10 overflow-hidden py-0">
-              <div className="space-y-4 p-5">
-                <div className="ml-auto max-w-[85%] rounded-lg rounded-tr-sm bg-muted px-4 py-3 text-sm">
-                  Write me an opening range breakout strategy. 5 minute opening
-                  range, enter long on a break above the range high, short on a
-                  break below the range low.
-                </div>
-                <div className="max-w-[90%] space-y-3">
-                  <p className="px-1 py-1 text-sm text-muted-foreground">
-                    Here&apos;s a complete ORB strategy using the first five minutes of
-                    the session as the range.
-                  </p>
-                  <pre className="overflow-x-auto rounded-md border border-border bg-background p-4 font-mono text-xs leading-relaxed text-foreground">
-                    <code>{MOCK_SCRIPT}</code>
-                  </pre>
-                </div>
-              </div>
-            </Card>
+            <LandingDemo />
           </div>
         </section>
       </main>

@@ -23,9 +23,7 @@ vi.mock("@/lib/conversations", () => ({
 }));
 
 vi.mock("@/lib/agent/generate-response", () => ({
-  generateResponse: vi.fn(() => ({
-    toUIMessageStreamResponse: () => new Response("stream", { status: 200 }),
-  })),
+  generateResponse: vi.fn(() => Promise.resolve(new Response("stream", { status: 200 }))),
 }));
 
 import { POST } from "@/app/api/chat/route";

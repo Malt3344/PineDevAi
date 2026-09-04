@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-redirect";
 
-// Handles the redirect from a Supabase magic link email, exchanging the
-// one-time code for a session cookie before sending the user on to /chat.
+// Handles the redirect from a Supabase auth email (magic link, sign-up
+// confirmation, or password reset) or an OAuth provider, exchanging the
+// one-time code for a session cookie before sending the user onward.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/chat";
+  const next = safeNextPath(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();

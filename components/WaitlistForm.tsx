@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 
 type Status = "idle" | "loading" | "success" | "error";
 
-/** The landing-page email capture form, posting to /api/waitlist. */
+/**
+ * Email capture form for the Pro (coming-soon) tier's waitlist, posting
+ * to /api/waitlist. Always stacked vertically — it lives inside a narrow
+ * pricing card, not a wide page section.
+ */
 export function WaitlistForm() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
@@ -51,7 +55,7 @@ export function WaitlistForm() {
     return (
       <div
         role="status"
-        className="flex w-full max-w-md items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary"
+        className="flex w-full items-center justify-center rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary"
       >
         {message}
       </div>
@@ -59,8 +63,8 @@ export function WaitlistForm() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row" noValidate>
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
         <Label htmlFor="waitlist-email" className="sr-only">
           Email address
         </Label>
@@ -70,9 +74,9 @@ export function WaitlistForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="h-11 flex-1"
+          className="h-11"
         />
-        <Button type="submit" size="lg" disabled={status === "loading"} className="h-11 shrink-0">
+        <Button type="submit" disabled={status === "loading"} className="h-11 w-full">
           {status === "loading" ? "Joining…" : "Join waitlist"}
         </Button>
       </form>

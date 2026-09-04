@@ -112,9 +112,10 @@ export async function POST(req: Request) {
     content: userText,
   });
 
-  // 5. Stream the assistant's reply, persisting it server-side once
-  // generation finishes. The client never writes assistant messages.
-  const result = generateResponse({
+  // 5. Generate and self-review the assistant's reply, persisting it
+  // server-side before it streams to the client. The client never writes
+  // assistant messages.
+  return generateResponse({
     modelId: conversation.model,
     messages: convertToModelMessages(messages),
     onFinish: async ({ text }) => {
@@ -126,6 +127,4 @@ export async function POST(req: Request) {
       });
     },
   });
-
-  return result.toUIMessageStreamResponse();
 }

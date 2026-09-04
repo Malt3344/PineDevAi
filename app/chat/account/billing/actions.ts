@@ -9,11 +9,16 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
-/** Starts a Stripe Checkout session for the paid plan and redirects to it. */
+/**
+ * Starts a Stripe Checkout session for the paid plan and redirects to it.
+ * Reachable while still unapproved (on the waitlist) — paying is itself a
+ * way in, not a plan upgrade reserved for people already let past the
+ * waitlist. Only an actual signed-in session is required.
+ */
 export async function startCheckoutAction() {
   const gate = await getApprovedUser();
-  if (gate.status !== "approved") {
-    throw new Error("Not authorized.");
+  if (gate.status === "unauthenticated") {
+    redirect("/login");
   }
 
   const url = await createCheckoutSession(db, gate.user.id, gate.user.email, siteUrl());

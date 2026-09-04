@@ -42,6 +42,7 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
           fontSize: "0.8rem",
           padding: "1rem",
           maxHeight: "16rem",
+          overflowX: "auto",
         }}
       >
         {strategy.code}

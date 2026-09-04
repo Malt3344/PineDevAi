@@ -2,8 +2,9 @@ import { createBrowserClient } from "@supabase/ssr";
 
 /**
  * Supabase client for use in Client Components — used only for auth
- * (magic-link sign-in and reading the session). All of PineDev's own data
- * goes through Drizzle directly against the same Postgres database.
+ * (sign-in, sign-up, password reset, OAuth, and reading the session). All
+ * of PineDev's own data goes through Drizzle directly against the same
+ * Postgres database.
  */
 export function createClient() {
   return createBrowserClient(

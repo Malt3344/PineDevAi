@@ -82,6 +82,11 @@ export async function createPortalSession(
  * row, found by Stripe customer id. Called only from the webhook handler,
  * after the event's signature has been verified — this is the one place
  * subscriptionStatus is ever written.
+ *
+ * A newly active subscription also grants isApproved — paying for Pro is
+ * itself a way past the manual-approval waitlist, not just a plan upgrade
+ * for someone already let in. Losing or canceling the subscription later
+ * does not revoke approval; it only drops the message cap back to free.
  */
 export async function syncSubscriptionStatus(
   db: typeof Db,
@@ -91,6 +96,10 @@ export async function syncSubscriptionStatus(
 ): Promise<void> {
   await db
     .update(profiles)
-    .set({ subscriptionStatus: status, stripeSubscriptionId })
+    .set({
+      subscriptionStatus: status,
+      stripeSubscriptionId,
+      ...(status === "active" ? { isApproved: true } : {}),
+    })
     .where(eq(profiles.stripeCustomerId, stripeCustomerId));
 }

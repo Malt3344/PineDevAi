@@ -8,10 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Status = "idle" | "loading" | "sent" | "error";
-type PasswordMode = "sign-in" | "sign-up";
+type Mode = "sign-in" | "sign-up" | "forgot-password";
 
 function GoogleIcon() {
   return (
@@ -36,16 +35,28 @@ function GoogleIcon() {
   );
 }
 
-/** Passwordless magic link, password, or Google — user picks. */
+/** The "PineDev" wordmark, always a link back to the landing page. */
+function Wordmark() {
+  return (
+    <Link href="/" className="mb-10 block text-center text-lg font-semibold tracking-tight">
+      PineDev
+    </Link>
+  );
+}
+
+/**
+ * Sign in, create an account, or reset a forgotten password — Google, or
+ * email and password. No magic link. Every branch below keeps a way back
+ * to the landing page (the wordmark) or to sign-in (the "Back" link).
+ */
 export default function LoginPage() {
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [sentEmail, setSentEmail] = useState("");
 
-  const [magicEmail, setMagicEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordMode, setPasswordMode] = useState<PasswordMode>("sign-in");
+  const [mode, setMode] = useState<Mode>("sign-up");
 
   async function handleGoogle() {
     setStatus("loading");
@@ -62,24 +73,21 @@ export default function LoginPage() {
     // On success the browser navigates away to Google, so no "loading" reset needed.
   }
 
-  async function handleMagicLink(event: FormEvent<HTMLFormElement>) {
+  async function handleForgotPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setStatus("loading");
-    setErrorMessage("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: magicEmail,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
     });
 
-    if (error) {
-      setStatus("error");
-      setErrorMessage(error.message);
-      return;
-    }
-
-    setSentEmail(magicEmail);
+    // Always show the same success state, whether or not an account exists
+    // for this email. Surfacing "no account with that email" here would let
+    // an attacker enumerate registered addresses one guess at a time —
+    // Supabase's own response can't be trusted to hide this by itself, so
+    // the UI has to.
+    setSentEmail(email);
     setStatus("sent");
   }
 
@@ -90,7 +98,7 @@ export default function LoginPage() {
 
     const supabase = createClient();
 
-    if (passwordMode === "sign-up") {
+    if (mode === "sign-up") {
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -119,138 +127,171 @@ export default function LoginPage() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
         <div className="w-full max-w-sm">
-          <Link
-            href="/"
-            className="mb-10 block text-center text-lg font-semibold tracking-tight"
-          >
-            PineDev
-          </Link>
+          <Wordmark />
           <Card>
             <CardContent className="text-center">
               <p className="text-sm font-medium text-foreground">Check your email</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                We sent a confirmation link to{" "}
-                <span className="text-foreground">{sentEmail}</span>. Click it to
-                continue.
+                We sent a link to <span className="text-foreground">{sentEmail}</span>.
+                Click it to continue.
               </p>
             </CardContent>
           </Card>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("idle");
+              setMode("sign-in");
+            }}
+            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (mode === "forgot-password") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
+        <div className="w-full max-w-sm">
+          <Wordmark />
+          <h1 className="text-center text-lg font-medium">Reset your password</h1>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Enter your email and we&apos;ll send you a link to set a new one.
+          </p>
+          <form onSubmit={handleForgotPassword} className="mt-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="forgot-email">Email address</Label>
+              <Input
+                id="forgot-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email address"
+                className="h-11"
+              />
+            </div>
+            <Button type="submit" disabled={status === "loading"} className="w-full h-11">
+              {status === "loading" ? "Sending…" : "Send reset link"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setMode("sign-in")}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back to sign in
+            </button>
+          </form>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-      <div className="w-full max-w-sm">
-        <Link href="/" className="mb-10 block text-center text-lg font-semibold tracking-tight">
-          PineDev
-        </Link>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-16">
+      <div className="w-full max-w-sm text-center">
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Welcome to{" "}
+          <Link href="/" className="text-primary">
+            PineDev
+          </Link>
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {mode === "sign-up" ? "Create your account to get started" : "Sign in to continue"}
+        </p>
 
-        <div className="space-y-4">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11"
-            disabled={status === "loading"}
-            onClick={handleGoogle}
-          >
-            <GoogleIcon />
-            Continue with Google
-          </Button>
+        <Card className="mt-8 overflow-hidden py-0 text-left">
+          <CardContent className="space-y-4 py-6">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11"
+              disabled={status === "loading"}
+              onClick={handleGoogle}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </Button>
 
-          <div className="flex items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <Separator className="flex-1" />
-          </div>
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <Separator className="flex-1" />
+            </div>
 
-          {status === "error" && (
-            <p className="text-sm text-destructive">{errorMessage}</p>
-          )}
+            {status === "error" && (
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            )}
 
-          <Tabs defaultValue="magic-link">
-            <TabsList className="w-full">
-              <TabsTrigger value="magic-link" className="flex-1">
-                Magic link
-              </TabsTrigger>
-              <TabsTrigger value="password" className="flex-1">
-                Password
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="magic-link" className="mt-4">
-              <form onSubmit={handleMagicLink} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="magic-email">Email</Label>
-                  <Input
-                    id="magic-email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={magicEmail}
-                    onChange={(e) => setMagicEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="h-11"
-                  />
-                </div>
-                <Button type="submit" disabled={status === "loading"} className="w-full h-11">
-                  {status === "loading" ? "Sending link…" : "Send magic link"}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="password" className="mt-4">
-              <form onSubmit={handlePassword} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="password-email">Email</Label>
-                  <Input
-                    id="password-email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
+            <form onSubmit={handlePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="h-11"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    minLength={8}
-                    autoComplete={passwordMode === "sign-up" ? "new-password" : "current-password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="h-11"
-                  />
+                  {mode === "sign-in" && (
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot-password")}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
                 </div>
-                <Button type="submit" disabled={status === "loading"} className="w-full h-11">
-                  {status === "loading"
-                    ? "Please wait…"
-                    : passwordMode === "sign-up"
-                      ? "Create account"
-                      : "Sign in"}
-                </Button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPasswordMode(passwordMode === "sign-up" ? "sign-in" : "sign-up")
-                  }
-                  className="w-full text-center text-xs text-muted-foreground hover:text-foreground"
-                >
-                  {passwordMode === "sign-up"
-                    ? "Already have an account? Sign in"
-                    : "New here? Create an account"}
-                </button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </div>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={8}
+                  autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="h-11"
+                />
+              </div>
+              <Button type="submit" disabled={status === "loading"} className="w-full h-11">
+                {status === "loading"
+                  ? "Please wait…"
+                  : mode === "sign-up"
+                    ? "Continue"
+                    : "Sign in"}
+              </Button>
+            </form>
+          </CardContent>
+
+          <button
+            type="button"
+            onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
+            className="w-full border-t border-border bg-muted/40 py-4 text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            {mode === "sign-up" ? (
+              <>
+                Already have an account? <span className="font-medium text-foreground">Sign in</span>
+              </>
+            ) : (
+              <>
+                New here? <span className="font-medium text-foreground">Create an account</span>
+              </>
+            )}
+          </button>
+        </Card>
       </div>
     </main>
   );

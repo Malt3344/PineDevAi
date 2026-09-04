@@ -80,6 +80,7 @@ function CodeBlock({
           background: "transparent",
           fontSize: "0.8rem",
           padding: "1rem",
+          overflowX: "auto",
         }}
       >
         {code}
