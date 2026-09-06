@@ -3,6 +3,7 @@ import { convertToModelMessages, type UIMessage } from "ai";
 import { NextResponse } from "next/server";
 import { getApprovedUser } from "@/lib/gate";
 import { checkDailyCap } from "@/lib/daily-cap";
+import { checkMonthlyBudget, recordUsage } from "@/lib/cost-cap";
 import { isMessageTooLong, MAX_MESSAGE_LENGTH } from "@/lib/message-limits";
 import { insertMessage } from "@/lib/messages";
 import { setInitialTitleIfEmpty } from "@/lib/conversations";
@@ -88,13 +89,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   }
 
-  // 3. Check the daily cap before persisting or calling the model. Paid
-  // subscribers get a higher cap — checkDailyCap looks that up itself.
+  // 3. Two independent limits, both checked before persisting or calling
+  // the model. The daily cap bounds request volume; the monthly budget
+  // bounds actual spend, which a message count cannot do on its own when
+  // models differ by two orders of magnitude in price.
   const cap = await checkDailyCap(db, user.id, user.subscriptionStatus);
   if (!cap.allowed) {
     return NextResponse.json(
       {
         error: `You have reached today's limit of ${cap.cap} messages. Please try again tomorrow.`,
+      },
+      { status: 429 },
+    );
+  }
+
+  const budget = await checkMonthlyBudget(db, user.id, user.subscriptionStatus);
+  if (!budget.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "You have used this month's included model usage. It resets at the start of next month.",
       },
       { status: 429 },
     );
@@ -125,6 +139,11 @@ export async function POST(req: Request) {
         role: "assistant",
         content: text,
       });
+    },
+    // Fires once per model call that actually happened — including the
+    // review pass, and the fallback model when the primary was skipped.
+    onUsage: async (event) => {
+      await recordUsage(db, { userId: user.id, ...event });
     },
   });
 }

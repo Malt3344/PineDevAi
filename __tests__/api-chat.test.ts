@@ -11,7 +11,12 @@ vi.mock("@/lib/db/client", () => ({
 
 vi.mock("@/lib/daily-cap", () => ({
   checkDailyCap: vi.fn(),
-  DAILY_MESSAGE_CAP: 50,
+  DAILY_MESSAGE_CAP: 20,
+}));
+
+vi.mock("@/lib/cost-cap", () => ({
+  checkMonthlyBudget: vi.fn(),
+  recordUsage: vi.fn(),
 }));
 
 vi.mock("@/lib/messages", () => ({
@@ -30,6 +35,7 @@ import { POST } from "@/app/api/chat/route";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { checkDailyCap } from "@/lib/daily-cap";
+import { checkMonthlyBudget } from "@/lib/cost-cap";
 import { insertMessage } from "@/lib/messages";
 import { setInitialTitleIfEmpty } from "@/lib/conversations";
 import { generateResponse } from "@/lib/agent/generate-response";
@@ -97,7 +103,7 @@ describe("POST /api/chat", () => {
     mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: false,
-      count: 50,
+      count: 20,
     });
 
     const res = await POST(
@@ -111,6 +117,34 @@ describe("POST /api/chat", () => {
     expect(generateResponse).not.toHaveBeenCalled();
   });
 
+  it("rejects a user who is under the message cap but out of monthly budget", async () => {
+    (getApprovedUser as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: "approved",
+      user: approvedUser,
+    });
+    mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
+    (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: true,
+      count: 1,
+    });
+    (checkMonthlyBudget as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: false,
+      spentMicroUsd: 8_000_000,
+      budgetMicroUsd: 8_000_000,
+    });
+
+    const res = await POST(
+      makeRequest({ conversationId: "c1", messages: userMessages }),
+    );
+    const data = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(data.error).toMatch(/model usage/i);
+    // Nothing is persisted and no model is called once the budget is gone.
+    expect(insertMessage).not.toHaveBeenCalled();
+    expect(generateResponse).not.toHaveBeenCalled();
+  });
+
   it("ignores any client-supplied user_id and persists the user message + calls the model on the happy path", async () => {
     (getApprovedUser as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: "approved",
@@ -120,6 +154,11 @@ describe("POST /api/chat", () => {
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 0,
+    });
+    (checkMonthlyBudget as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: true,
+      spentMicroUsd: 0,
+      budgetMicroUsd: 8_000_000,
     });
 
     const res = await POST(
@@ -172,6 +211,11 @@ describe("POST /api/chat", () => {
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 0,
+    });
+    (checkMonthlyBudget as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: true,
+      spentMicroUsd: 0,
+      budgetMicroUsd: 8_000_000,
     });
 
     await POST(makeRequest({ conversationId: "c1", messages: userMessages }));

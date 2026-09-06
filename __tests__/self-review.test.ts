@@ -9,11 +9,12 @@ vi.mock("ai", async () => {
   return { ...actual, generateText: mockGenerateText };
 });
 
-vi.mock("@ai-sdk/anthropic", () => ({
-  anthropic: vi.fn((modelId: string) => ({ modelId })),
+vi.mock("@/lib/agent/provider", () => ({
+  languageModelFor: vi.fn((modelId: string) => ({ modelId })),
 }));
 
 import { selfReviewAndCorrect } from "@/lib/agent/self-review";
+import { languageModelFor } from "@/lib/agent/provider";
 
 describe("selfReviewAndCorrect", () => {
   beforeEach(() => {
@@ -26,7 +27,7 @@ describe("selfReviewAndCorrect", () => {
     const result = await selfReviewAndCorrect("claude-sonnet-4-6", draft);
 
     expect(mockGenerateText).not.toHaveBeenCalled();
-    expect(result).toBe(draft);
+    expect(result.text).toBe(draft);
   });
 
   it("keeps the draft unchanged when the reviewer says OK", async () => {
@@ -35,7 +36,7 @@ describe("selfReviewAndCorrect", () => {
 
     const result = await selfReviewAndCorrect("claude-sonnet-4-6", draft);
 
-    expect(result).toBe(draft);
+    expect(result.text).toBe(draft);
   });
 
   it("splices in the reviewer's corrected code when it finds a problem", async () => {
@@ -46,8 +47,9 @@ describe("selfReviewAndCorrect", () => {
 
     const result = await selfReviewAndCorrect("claude-sonnet-4-6", draft);
 
-    expect(result).toContain('strategy("fixed")');
-    expect(result).not.toContain('strategy("broken")');
-    expect(result.startsWith("Here:")).toBe(true);
+    expect(languageModelFor).toHaveBeenCalledWith("claude-sonnet-4-6");
+    expect(result.text).toContain('strategy("fixed")');
+    expect(result.text).not.toContain('strategy("broken")');
+    expect(result.text.startsWith("Here:")).toBe(true);
   });
 });

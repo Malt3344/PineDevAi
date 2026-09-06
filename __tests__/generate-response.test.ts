@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockGenerateText } = vi.hoisted(() => ({
   mockGenerateText: vi.fn(),
@@ -6,21 +6,24 @@ const { mockGenerateText } = vi.hoisted(() => ({
 
 vi.mock("ai", async () => {
   const actual = await vi.importActual<typeof import("ai")>("ai");
-  return {
-    ...actual,
-    generateText: mockGenerateText,
-  };
+  return { ...actual, generateText: mockGenerateText };
 });
 
-vi.mock("@ai-sdk/anthropic", () => ({
-  anthropic: vi.fn((modelId: string) => ({ modelId })),
+// The provider layer is the seam: these tests care about which model id is
+// asked for, never about which vendor SDK answers.
+vi.mock("@/lib/agent/provider", () => ({
+  languageModelFor: vi.fn((modelId: string) => ({ modelId })),
 }));
 
 import { generateResponse } from "@/lib/agent/generate-response";
 import { SYSTEM_PROMPT } from "@/lib/agent/system-prompt";
 import { REVIEW_SYSTEM_PROMPT } from "@/lib/agent/self-review";
-import { DEFAULT_AGENT_MODEL_ID } from "@/lib/agent/models";
-import { anthropic } from "@ai-sdk/anthropic";
+import {
+  DEFAULT_AGENT_MODEL_ID,
+  FALLBACK_AGENT_MODEL_ID,
+  REVIEW_MODEL_ID,
+} from "@/lib/agent/models";
+import { languageModelFor } from "@/lib/agent/provider";
 
 /** Reads the full text out of a UI-message-stream Response, for assertions. */
 async function readStreamedText(response: Response): Promise<string> {
@@ -31,17 +34,26 @@ async function readStreamedText(response: Response): Promise<string> {
   return deltas.join("");
 }
 
+const DRAFT_WITH_CODE = 'Here you go:\n```pine\nstrategy("broken")\n```';
+const USAGE = { inputTokens: 100, outputTokens: 50 };
+
 describe("generateResponse", () => {
   beforeEach(() => {
     mockGenerateText.mockReset();
+    vi.mocked(languageModelFor).mockClear();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("defaults to the default model, and returns the draft unchanged when there is no code to review", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "Repainting means..." });
+    mockGenerateText.mockResolvedValueOnce({ text: "Repainting means...", usage: USAGE });
 
     const response = await generateResponse({ messages: [] });
 
-    expect(anthropic).toHaveBeenCalledWith(DEFAULT_AGENT_MODEL_ID);
+    expect(languageModelFor).toHaveBeenCalledWith(DEFAULT_AGENT_MODEL_ID);
     expect(mockGenerateText).toHaveBeenCalledTimes(1);
     expect(mockGenerateText).toHaveBeenCalledWith(
       expect.objectContaining({ system: SYSTEM_PROMPT, messages: [] }),
@@ -50,10 +62,12 @@ describe("generateResponse", () => {
   });
 
   it("runs a real second review pass and streams the corrected code when the reviewer finds a problem", async () => {
-    const draft = 'Here you go:\n```pine\nstrategy("broken")\n```';
     mockGenerateText
-      .mockResolvedValueOnce({ text: draft })
-      .mockResolvedValueOnce({ text: '```pine\n//@version=6\nstrategy("fixed")\n```' });
+      .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+      .mockResolvedValueOnce({
+        text: '```pine\n//@version=6\nstrategy("fixed")\n```',
+        usage: USAGE,
+      });
 
     const response = await generateResponse({ modelId: "claude-opus-4-6", messages: [] });
 
@@ -67,12 +81,105 @@ describe("generateResponse", () => {
     expect(text).not.toContain('strategy("broken")');
   });
 
+  it("sends a cheap model's code to the premium reviewer, so an economy draft is still checked properly", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+      .mockResolvedValueOnce({ text: "OK", usage: USAGE });
+
+    await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [] });
+
+    expect(languageModelFor).toHaveBeenNthCalledWith(1, DEFAULT_AGENT_MODEL_ID);
+    expect(languageModelFor).toHaveBeenNthCalledWith(2, REVIEW_MODEL_ID);
+  });
+
   it("calls onFinish with the final (possibly corrected) text before the client-facing stream starts", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "hello" });
+    mockGenerateText.mockResolvedValueOnce({ text: "hello", usage: USAGE });
     const onFinish = vi.fn();
 
     await generateResponse({ messages: [], onFinish });
 
     expect(onFinish).toHaveBeenCalledWith({ text: "hello" });
+  });
+
+  describe("fallback", () => {
+    it("serves the reply from the fallback model when the primary provider fails", async () => {
+      mockGenerateText
+        .mockRejectedValueOnce(new Error("429 rate limited"))
+        .mockResolvedValueOnce({ text: "from the fallback", usage: USAGE });
+
+      const response = await generateResponse({
+        modelId: DEFAULT_AGENT_MODEL_ID,
+        messages: [],
+      });
+
+      expect(languageModelFor).toHaveBeenNthCalledWith(1, DEFAULT_AGENT_MODEL_ID);
+      expect(languageModelFor).toHaveBeenNthCalledWith(2, FALLBACK_AGENT_MODEL_ID);
+      await expect(readStreamedText(response)).resolves.toBe("from the fallback");
+    });
+
+    it("bills the fallback model, not the one that failed", async () => {
+      mockGenerateText
+        .mockRejectedValueOnce(new Error("provider down"))
+        .mockResolvedValueOnce({ text: "from the fallback", usage: USAGE });
+      const onUsage = vi.fn();
+
+      await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
+
+      expect(onUsage).toHaveBeenCalledTimes(1);
+      expect(onUsage).toHaveBeenCalledWith({
+        modelId: FALLBACK_AGENT_MODEL_ID,
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+    });
+
+    it("throws only when every model in the chain fails", async () => {
+      mockGenerateText
+        .mockRejectedValueOnce(new Error("primary down"))
+        .mockRejectedValueOnce(new Error("fallback down"));
+
+      await expect(generateResponse({ messages: [] })).rejects.toThrow("fallback down");
+    });
+
+    it("still delivers the draft when the review pass fails, rather than crashing the chat", async () => {
+      mockGenerateText
+        .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+        .mockRejectedValueOnce(new Error("reviewer unavailable"));
+
+      const response = await generateResponse({ messages: [] });
+
+      await expect(readStreamedText(response)).resolves.toBe(DRAFT_WITH_CODE);
+    });
+  });
+
+  describe("usage reporting", () => {
+    it("reports the draft and the review as separate calls, each against the model that ran it", async () => {
+      mockGenerateText
+        .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+        .mockResolvedValueOnce({ text: "OK", usage: { inputTokens: 20, outputTokens: 1 } });
+      const onUsage = vi.fn();
+
+      await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
+
+      expect(onUsage).toHaveBeenNthCalledWith(1, {
+        modelId: DEFAULT_AGENT_MODEL_ID,
+        inputTokens: 100,
+        outputTokens: 50,
+      });
+      expect(onUsage).toHaveBeenNthCalledWith(2, {
+        modelId: REVIEW_MODEL_ID,
+        inputTokens: 20,
+        outputTokens: 1,
+      });
+    });
+
+    it("does not report a review that never ran", async () => {
+      mockGenerateText.mockResolvedValueOnce({ text: "no code here", usage: USAGE });
+      const onUsage = vi.fn();
+
+      await generateResponse({ messages: [], onUsage });
+
+      expect(onUsage).toHaveBeenCalledTimes(1);
+    });
   });
 });

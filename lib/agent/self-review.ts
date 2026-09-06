@@ -1,6 +1,6 @@
-import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 import { extractCodeBlock } from "@/lib/pine-code";
+import { languageModelFor } from "./provider";
 
 export const REVIEW_SYSTEM_PROMPT = `You are a meticulous Pine Script v6 compiler and code reviewer, checking a script another engineer just wrote before it reaches the user.
 
@@ -15,34 +15,46 @@ Check specifically for:
 
 Reply with EXACTLY the single word "OK" (nothing else, no punctuation) if the script has none of these problems. Otherwise, reply with ONLY the complete corrected script in a single Pine Script code block — no commentary, no explanation, no partial diff.`;
 
+export type ReviewResult = {
+  text: string;
+  inputTokens: number | undefined;
+  outputTokens: number | undefined;
+};
+
 /**
  * Runs one real review pass over a draft reply's Pine Script, using a
  * second model call to check it against known Pine v6 pitfalls and either
  * confirm it or return a corrected version. Replies with no code (e.g. a
- * conceptual answer) pass through untouched — there is nothing to review.
+ * conceptual answer) pass through untouched — there is nothing to review,
+ * and the call is skipped rather than paid for.
  *
- * This is the actual mechanism behind "reiterates until there are no
- * syntax mistakes" — not a description of intent, a real second pass that
- * runs before every response reaches the user.
+ * The reviewing model is chosen by reviewModelIdFor(), not by the caller's
+ * model: a cheap draft still gets reviewed by a strong model, which is
+ * where most of the quality of the final script comes from.
  */
 export async function selfReviewAndCorrect(
-  modelId: string,
+  reviewModelId: string,
   draftText: string,
-): Promise<string> {
+): Promise<ReviewResult> {
   const original = extractCodeBlock(draftText);
-  if (!original) return draftText;
+  if (!original) {
+    return { text: draftText, inputTokens: undefined, outputTokens: undefined };
+  }
 
-  const { text: verdict } = await generateText({
-    model: anthropic(modelId),
+  const { text: verdict, usage } = await generateText({
+    model: languageModelFor(reviewModelId),
     system: REVIEW_SYSTEM_PROMPT,
     prompt: `Review this Pine Script v6 code:\n\n${original}`,
   });
 
   const trimmedVerdict = verdict.trim();
-  if (trimmedVerdict === "OK") {
-    return draftText;
-  }
+  const text =
+    trimmedVerdict === "OK"
+      ? draftText
+      : draftText.replace(
+          original,
+          (extractCodeBlock(trimmedVerdict) ?? trimmedVerdict).trim(),
+        );
 
-  const corrected = extractCodeBlock(trimmedVerdict) ?? trimmedVerdict;
-  return draftText.replace(original, corrected.trim());
+  return { text, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens };
 }

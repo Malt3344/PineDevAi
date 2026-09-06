@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  integer,
   pgSchema,
   pgTable,
   text,
@@ -102,4 +103,27 @@ export const strategies = pgTable(
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [index("strategy_user_id_idx").on(table.userId)],
+);
+
+// One row per model call, written after the call returns. This is what the
+// spend cap counts against — message counts alone say nothing about cost
+// when models differ by two orders of magnitude in price.
+//
+// Cost is stored as whole micro-USD (1 USD = 1_000_000) rather than a
+// float, so a month of accumulation cannot drift.
+export const usageEvents = pgTable(
+  "usage_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("userId")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    // The registry id (e.g. "deepseek-v3"), not the provider's slug.
+    modelId: text("modelId").notNull(),
+    inputTokens: integer("inputTokens").notNull().default(0),
+    outputTokens: integer("outputTokens").notNull().default(0),
+    costMicroUsd: integer("costMicroUsd").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (table) => [index("usage_event_user_id_created_at_idx").on(table.userId, table.createdAt)],
 );

@@ -15,6 +15,13 @@
       "when": 1788465982215,
       "tag": "0001_right_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788723631391,
+      "tag": "0002_tiny_garia",
+      "breakpoints": true
     }
   ]
 }

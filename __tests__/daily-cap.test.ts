@@ -35,13 +35,13 @@ describe("daily cap", () => {
     expect(where).toHaveBeenCalledTimes(1);
   });
 
-  it("allows sending the 50th message (count of 49 so far, cap of 50)", async () => {
+  it("allows one more message when the count is still below the cap", async () => {
     const { db } = makeDb(DAILY_MESSAGE_CAP - 1);
 
     const result = await checkDailyCap(db, "u1", "free");
 
     expect(result.allowed).toBe(true);
-    expect(result.count).toBe(49);
+    expect(result.count).toBe(DAILY_MESSAGE_CAP - 1);
     expect(result.cap).toBe(DAILY_MESSAGE_CAP);
   });
 
@@ -51,7 +51,7 @@ describe("daily cap", () => {
     const result = await checkDailyCap(db, "u1", "free");
 
     expect(result.allowed).toBe(false);
-    expect(result.count).toBe(50);
+    expect(result.count).toBe(DAILY_MESSAGE_CAP);
   });
 
   it("uses the higher paid cap for an active subscriber", async () => {

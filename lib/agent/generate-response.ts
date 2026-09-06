@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { anthropic } from "@ai-sdk/anthropic";
 import {
   generateText,
   createUIMessageStream,
@@ -8,7 +7,13 @@ import {
 } from "ai";
 import { SYSTEM_PROMPT } from "./system-prompt";
 import { selfReviewAndCorrect } from "./self-review";
-import { DEFAULT_AGENT_MODEL_ID } from "./models";
+import { languageModelFor } from "./provider";
+import { modelChain, withModelFallback } from "./fallback";
+import {
+  DEFAULT_AGENT_MODEL_ID,
+  FALLBACK_AGENT_MODEL_ID,
+  reviewModelIdFor,
+} from "./models";
 
 // Streamed back to the client in small pieces rather than all at once, so
 // the UI still feels like a live reply even though the text itself was
@@ -28,36 +33,77 @@ function toChunks(text: string, size: number): string[] {
   return chunks;
 }
 
+export type UsageEvent = {
+  modelId: string;
+  inputTokens: number | undefined;
+  outputTokens: number | undefined;
+};
+
 type OnFinish = (result: { text: string }) => void | Promise<void>;
+type OnUsage = (event: UsageEvent) => void | Promise<void>;
 
 /**
  * Generates a reply, then runs one real self-review pass over any Pine
- * Script it contains (a second model call — see self-review.ts) before
- * anything reaches the user. The route handler stays dumb (auth/gate/cap
- * → call this → return the response); the system prompt and review logic
- * each live in exactly one place.
+ * Script it contains before anything reaches the user. The route handler
+ * stays dumb (auth/gate/cap → call this → return the response); the system
+ * prompt, review logic and model registry each live in exactly one place.
  *
- * Returns a full Response rather than a stream handle, because the text
- * is already final by the time this returns — there's nothing left to
- * await downstream. The model id is validated against AGENT_MODELS by
- * the caller before it ever reaches here.
+ * Two things guard against a bad turn. The draft is generated through
+ * withModelFallback, so a provider outage or rate limit moves to another
+ * vendor instead of erroring. The review is best-effort: if it fails, the
+ * user gets the unreviewed draft rather than nothing, because a slightly
+ * less polished answer beats a crashed chat.
+ *
+ * `onUsage` fires once per model call that actually happened, with the
+ * model that served it — this module never touches the database itself.
  */
 export async function generateResponse({
   modelId = DEFAULT_AGENT_MODEL_ID,
   messages,
   onFinish,
+  onUsage,
 }: {
   modelId?: string;
   messages: ModelMessage[];
   onFinish?: OnFinish;
+  onUsage?: OnUsage;
 }): Promise<Response> {
-  const draft = await generateText({
-    model: anthropic(modelId),
-    system: SYSTEM_PROMPT,
-    messages,
+  const draft = await withModelFallback(
+    modelChain(modelId, FALLBACK_AGENT_MODEL_ID),
+    async (id) => {
+      const result = await generateText({
+        model: languageModelFor(id),
+        system: SYSTEM_PROMPT,
+        messages,
+      });
+      return { ...result, servedByModelId: id };
+    },
+    (failedModelId, error) =>
+      console.warn(`Model ${failedModelId} failed, falling back.`, error),
+  );
+
+  await onUsage?.({
+    modelId: draft.servedByModelId,
+    inputTokens: draft.usage?.inputTokens,
+    outputTokens: draft.usage?.outputTokens,
   });
 
-  const finalText = await selfReviewAndCorrect(modelId, draft.text);
+  const reviewModelId = reviewModelIdFor(draft.servedByModelId);
+  let finalText = draft.text;
+
+  try {
+    const review = await selfReviewAndCorrect(reviewModelId, draft.text);
+    finalText = review.text;
+    if (review.inputTokens !== undefined || review.outputTokens !== undefined) {
+      await onUsage?.({
+        modelId: reviewModelId,
+        inputTokens: review.inputTokens,
+        outputTokens: review.outputTokens,
+      });
+    }
+  } catch (error) {
+    console.warn("Self-review failed; returning the unreviewed draft.", error);
+  }
 
   await onFinish?.({ text: finalText });
 

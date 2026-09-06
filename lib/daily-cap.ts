@@ -8,11 +8,22 @@ import type { SubscriptionStatus } from "@/lib/gate";
  * Best-effort for MVP: a concurrent-request race can exceed this by a
  * message or two, and that is an accepted tradeoff — no transactional
  * rate limiting here.
+ *
+ * This is the anti-spam guard, deliberately not the budget guard: it
+ * bounds request volume, while lib/cost-cap.ts bounds actual spend. A
+ * message count cannot protect a budget on its own, because one turn can
+ * cost anywhere from a tenth of a cent to several cents depending on the
+ * model and how long the conversation has grown.
  */
-export const DAILY_MESSAGE_CAP = 50;
+export const DAILY_MESSAGE_CAP = 20;
 
-/** Cap for a user with an active paid subscription. */
-export const PAID_DAILY_MESSAGE_CAP = 1000;
+/**
+ * Cap for a user with an active paid subscription. Sized as a generous
+ * ceiling on a heavy day of real work, not as the spend limit — at the old
+ * value of 1000 a single user on a premium model could run up more in one
+ * day than their subscription brings in over a month.
+ */
+export const PAID_DAILY_MESSAGE_CAP = 150;
 
 /** Picks the right daily cap for a user's current subscription status. */
 export function capForSubscription(status: SubscriptionStatus): number {
