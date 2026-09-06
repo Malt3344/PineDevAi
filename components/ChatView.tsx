@@ -7,6 +7,7 @@ import { ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { MessageContent } from "@/components/MessageContent";
 import { StrategyEditorPanel } from "@/components/StrategyEditorPanel";
+import { WorkspacePanel, type SavedStrategy } from "@/components/WorkspacePanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,22 +24,28 @@ function messageText(message: UIMessage): string {
 }
 
 /**
- * The active conversation view: a wide "current script" panel showing the
- * most recently generated Pine Script (real data from this conversation,
- * not a separate editable project), and a narrower chat panel alongside
- * it. Persistence of both the user's message and the assistant's reply
- * happens server-side in /api/chat.
+ * The active conversation view: a workspace panel (the user's real saved
+ * strategies), a code panel showing whichever script is open, and a
+ * narrower chat panel alongside it. Persistence of both the user's
+ * message and the assistant's reply happens server-side in /api/chat.
  */
 export function ChatView({
   conversationId,
+  conversationTitle,
   initialMessages,
   modelLabel,
+  savedStrategies,
 }: {
   conversationId: string;
+  conversationTitle: string;
   initialMessages: UIMessage[];
   modelLabel: string;
+  savedStrategies: SavedStrategy[];
 }) {
   const [input, setInput] = useState("");
+  // null = "this conversation" (the live script); otherwise a saved
+  // strategy's id, selected from the workspace panel.
+  const [openFileId, setOpenFileId] = useState<string | null>(null);
 
   const transport = useMemo(
     () =>
@@ -58,12 +65,20 @@ export function ChatView({
   const isBusy = status === "submitted" || status === "streaming";
   const latestCode = extractLatestCodeBlock(messages.map(messageText));
 
+  const openStrategy = savedStrategies.find((s) => s.id === openFileId) ?? null;
+  const displayedCode = openStrategy ? openStrategy.code : latestCode;
+  const displayedFileName = openStrategy ? `${openStrategy.title}.pine` : "this conversation.pine";
+
   /** Sends the current draft, if non-empty and no generation is in flight. */
   function submitDraft() {
     const trimmed = input.trim();
     if (!trimmed || isBusy) return;
     sendMessage({ text: trimmed });
     setInput("");
+    // Asking a new question is a clear signal to show what comes back
+    // from it — if a saved file was open in the editor, switch back to
+    // the live conversation so the fresh script is what appears.
+    setOpenFileId(null);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -94,15 +109,28 @@ export function ChatView({
 
   return (
     <div className="flex flex-1 overflow-hidden">
+      <WorkspacePanel
+        strategies={savedStrategies}
+        selectedId={openFileId}
+        onSelect={setOpenFileId}
+      />
+
       {/* Current-script panel — hidden on narrow screens, where the chat
           alone already shows the same code inline. */}
       <div className="hidden min-w-0 flex-1 border-r border-border lg:block">
-        <StrategyEditorPanel code={latestCode} onSave={handleSaveCode} />
+        <StrategyEditorPanel
+          code={displayedCode}
+          fileName={displayedFileName}
+          onSave={openStrategy ? undefined : handleSaveCode}
+        />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col lg:w-[420px] lg:flex-none">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-8">
-          <Badge variant="secondary">{modelLabel}</Badge>
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-8">
+          <h1 className="truncate text-sm font-medium">{conversationTitle}</h1>
+          <Badge variant="secondary" className="shrink-0">
+            {modelLabel}
+          </Badge>
         </div>
 
         <ScrollArea className="flex-1 px-4 py-6 sm:px-8">

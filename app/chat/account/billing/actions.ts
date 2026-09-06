@@ -4,10 +4,7 @@ import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { createCheckoutSession, createPortalSession } from "@/lib/billing";
-
-function siteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
+import { getSiteUrl } from "@/lib/site-url";
 
 /**
  * Starts a Stripe Checkout session for the paid plan and redirects to it.
@@ -21,7 +18,7 @@ export async function startCheckoutAction() {
     redirect("/login");
   }
 
-  const url = await createCheckoutSession(db, gate.user.id, gate.user.email, siteUrl());
+  const url = await createCheckoutSession(db, gate.user.id, gate.user.email, getSiteUrl());
   redirect(url);
 }
 
@@ -32,6 +29,6 @@ export async function openBillingPortalAction() {
     throw new Error("Not authorized.");
   }
 
-  const url = await createPortalSession(db, gate.user.id, gate.user.email, siteUrl());
+  const url = await createPortalSession(db, gate.user.id, gate.user.email, getSiteUrl());
   redirect(url);
 }

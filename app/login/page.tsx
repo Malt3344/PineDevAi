@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,15 +49,25 @@ function Wordmark() {
  * Sign in, create an account, or reset a forgotten password — Google, or
  * email and password. No magic link. Every branch below keeps a way back
  * to the landing page (the wordmark) or to sign-in (the "Back" link).
+ *
+ * Defaults to sign-in — most visits here are a returning user, not a new
+ * one. A link that specifically means "create an account" (the landing
+ * page's "Get Started") passes ?mode=sign-up to start there instead.
+ * Without this, a returning user typing their password on the default
+ * view would silently trigger signUp() instead of signing in, which
+ * re-sends a confirmation email every time rather than logging them in.
  */
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const initialMode: Mode = searchParams.get("mode") === "sign-up" ? "sign-up" : "sign-in";
+
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [sentEmail, setSentEmail] = useState("");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<Mode>("sign-up");
+  const [mode, setMode] = useState<Mode>(initialMode);
 
   async function handleGoogle() {
     setStatus("loading");
@@ -294,5 +305,13 @@ export default function LoginPage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

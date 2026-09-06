@@ -4,6 +4,7 @@ import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { profiles } from "@/lib/db/schema";
 import { signOutAction } from "@/app/chat/actions";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,19 @@ export default async function ProfilePage() {
               <p className="text-sm">{memberSince}</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Set or change your password. If you signed in with Google, this adds a
+            password as an alternate way in.
+          </p>
+          <ChangePasswordForm />
         </CardContent>
       </Card>
 

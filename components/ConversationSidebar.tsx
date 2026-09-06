@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -105,9 +106,11 @@ function AccountMenu({ userEmail }: { userEmail: string }) {
           <span className="truncate text-sm">{userEmail}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-56">
-          <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
-            {userEmail}
-          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
+              {userEmail}
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem render={<Link href="/chat/account" />}>
             <Settings />
@@ -117,6 +120,7 @@ function AccountMenu({ userEmail }: { userEmail: string }) {
           <form action={signOutAction}>
             <DropdownMenuItem
               render={<button type="submit" className="w-full" />}
+              nativeButton
               variant="destructive"
             >
               <LogOut />

@@ -24,7 +24,7 @@ const HOW_IT_WORKS = [
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
         <span className="text-sm font-semibold tracking-tight">PineDev</span>
         <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
           Log in
@@ -32,24 +32,23 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-20 pb-24 text-center sm:pt-28">
-          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+        <section className="mx-auto flex max-w-6xl flex-col items-center px-6 pt-8 pb-16 text-center sm:pt-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
             Describe your strategy.
             <br />
             Get working Pine Script v6.
           </h1>
-          <p className="mt-6 max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
+          <p className="mt-4 max-w-xl text-balance text-sm text-muted-foreground sm:text-base">
             PineDev is an AI agent that writes and fixes TradingView Pine Script for
             you. Paste a compiler error and it ships a corrected script back &mdash;
             no forums, no guesswork.
           </p>
 
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg" nativeButton={false} render={<Link href="/login" />}>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Button nativeButton={false} render={<Link href="/login?mode=sign-up" />}>
               Get Started
             </Button>
             <Button
-              size="lg"
               variant="outline"
               nativeButton={false}
               render={<Link href="/pricing" />}
@@ -59,7 +58,11 @@ export default function Home() {
             </Button>
           </div>
 
-          <p className="mt-10 text-xs text-muted-foreground">
+          <div className="mt-8 w-full">
+            <LandingDemo />
+          </div>
+
+          <p className="mt-4 text-xs text-muted-foreground">
             Pick between multiple Claude models, and save the strategies you
             like to a personal library.
           </p>
@@ -81,15 +84,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </div>
-        </section>
-
-        <section className="border-t border-border">
-          <div className="mx-auto max-w-3xl px-6 py-20">
-            <h2 className="text-center text-sm font-medium tracking-wide text-muted-foreground uppercase">
-              In practice
-            </h2>
-            <LandingDemo />
           </div>
         </section>
       </main>

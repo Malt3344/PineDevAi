@@ -3,25 +3,28 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Bookmark, BookmarkCheck, Check, Copy, FileCode } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, Copy, FileCode, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 /**
- * The "current script" panel: the most recently generated Pine Script in
- * this conversation, shown large and read-only alongside the chat — real
- * data pulled straight from the conversation, not a separate editable or
- * runnable file (PineDev doesn't execute Pine Script; only TradingView's
- * own editor does).
+ * The code panel: a tab showing whichever script is open (the live
+ * conversation's latest script, or a saved strategy selected from the
+ * workspace list), with real data either way. Read-only — PineDev
+ * doesn't execute Pine Script; only TradingView's own editor does, which
+ * is also why Run is disabled rather than faking a result.
  */
 export function StrategyEditorPanel({
   code,
+  fileName,
   onSave,
 }: {
   code: string | null;
-  onSave: (code: string) => Promise<void>;
+  fileName: string;
+  onSave?: (code: string) => Promise<void>;
 }) {
   const [copied, setCopied] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
@@ -34,7 +37,7 @@ export function StrategyEditorPanel({
   }
 
   async function handleSave() {
-    if (!code || saveStatus === "saving") return;
+    if (!code || !onSave || saveStatus === "saving") return;
     setSaveStatus("saving");
     try {
       await onSave(code);
@@ -47,14 +50,14 @@ export function StrategyEditorPanel({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <FileCode className="size-4" />
-          strategy.pine
-        </span>
-        {code && (
-          <div className="flex items-center gap-1">
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex items-center justify-between border-b border-border bg-sidebar">
+        <div className="flex items-center gap-1.5 border-t-2 border-t-primary bg-background px-4 py-2.5 text-sm">
+          <FileCode className="size-4 text-muted-foreground" />
+          {fileName}
+        </div>
+        <div className="flex items-center gap-1.5 px-2">
+          {code && onSave && (
             <Button variant="ghost" size="sm" onClick={handleSave} disabled={saveStatus === "saving"}>
               {saveStatus === "saved" ? <BookmarkCheck /> : <Bookmark />}
               {saveStatus === "saved"
@@ -65,12 +68,26 @@ export function StrategyEditorPanel({
                     ? "Saving…"
                     : "Save strategy"}
             </Button>
+          )}
+          {code && (
             <Button variant="ghost" size="sm" onClick={handleCopy}>
               {copied ? <Check /> : <Copy />}
               {copied ? "Copied" : "Copy"}
             </Button>
-          </div>
-        )}
+          )}
+          <Tooltip>
+            <TooltipTrigger
+              render={<Button variant="outline" size="sm" disabled focusableWhenDisabled />}
+            >
+              <Play />
+              Run
+            </TooltipTrigger>
+            <TooltipContent>
+              Pine Script only runs inside TradingView&apos;s own editor — paste the
+              script there to run it
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {code ? (
@@ -78,6 +95,14 @@ export function StrategyEditorPanel({
           <SyntaxHighlighter
             language="pine"
             style={oneDark}
+            showLineNumbers
+            lineNumberStyle={{
+              minWidth: "2.5em",
+              paddingRight: "1em",
+              color: "var(--muted-foreground)",
+              opacity: 0.5,
+              userSelect: "none",
+            }}
             customStyle={{
               margin: 0,
               background: "transparent",

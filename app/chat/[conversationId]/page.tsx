@@ -5,6 +5,7 @@ import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { conversations, messages } from "@/lib/db/schema";
 import { AGENT_MODELS } from "@/lib/agent/models";
+import { listStrategies } from "@/lib/strategies";
 import { ChatView } from "@/components/ChatView";
 
 /**
@@ -32,7 +33,7 @@ export default async function ConversationPage({
   }
 
   const [conversation] = await db
-    .select({ id: conversations.id, model: conversations.model })
+    .select({ id: conversations.id, model: conversations.model, title: conversations.title })
     .from(conversations)
     .where(
       and(eq(conversations.id, conversationId), eq(conversations.userId, gate.user.id)),
@@ -58,11 +59,17 @@ export default async function ConversationPage({
     AGENT_MODELS.find((model) => model.id === conversation.model)?.label ??
     conversation.model;
 
+  // Real data for the workspace panel — the user's actual saved
+  // strategies, not a fabricated file list.
+  const strategies = await listStrategies(db, gate.user.id);
+
   return (
     <ChatView
       conversationId={conversationId}
+      conversationTitle={conversation.title}
       initialMessages={initialMessages}
       modelLabel={modelLabel}
+      savedStrategies={strategies.map((s) => ({ id: s.id, title: s.title, code: s.code }))}
     />
   );
 }
