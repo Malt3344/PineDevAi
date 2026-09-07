@@ -39,6 +39,7 @@ import { checkMonthlyBudget } from "@/lib/cost-cap";
 import { insertMessage } from "@/lib/messages";
 import { setInitialTitleIfEmpty } from "@/lib/conversations";
 import { generateResponse } from "@/lib/agent/generate-response";
+import { AGENT_MODELS, DEFAULT_AGENT_MODEL_ID } from "@/lib/agent/models";
 
 function mockConversationLookup(rows: { id: string; model: string }[]) {
   const where = vi.fn().mockResolvedValue(rows);
@@ -190,7 +191,9 @@ describe("POST /api/chat", () => {
     expect(generateResponse).toHaveBeenCalledTimes(1);
     const call = (generateResponse as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
-    expect(call.modelId).toBe("claude-sonnet-4-6");
+    // The conversation was started on a model that has since been removed
+    // from the registry; it falls back rather than failing forever.
+    expect(call.modelId).toBe(DEFAULT_AGENT_MODEL_ID);
     expect(call.messages).toBeDefined();
     expect(typeof call.onFinish).toBe("function");
 
@@ -233,5 +236,28 @@ describe("POST /api/chat", () => {
         content: "here is your corrected script",
       }),
     );
+  });
+
+  it("uses the conversation's own model when it is still a real one", async () => {
+    const real = AGENT_MODELS[AGENT_MODELS.length - 1].id;
+    (getApprovedUser as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: "approved",
+      user: approvedUser,
+    });
+    mockConversationLookup([{ id: "c1", model: real }]);
+    (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: true,
+      count: 0,
+    });
+    (checkMonthlyBudget as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      allowed: true,
+      spentMicroUsd: 0,
+      budgetMicroUsd: 8_000_000,
+    });
+
+    await POST(makeRequest({ conversationId: "c1", messages: userMessages }));
+
+    const call = (generateResponse as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(call.modelId).toBe(real);
   });
 });

@@ -4,8 +4,7 @@ import type { UIMessage } from "ai";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { conversations, messages } from "@/lib/db/schema";
-import { AGENT_MODELS } from "@/lib/agent/models";
-import { listStrategies } from "@/lib/strategies";
+import { resolveAgentModelId } from "@/lib/agent/models";
 import { ChatView } from "@/components/ChatView";
 
 /**
@@ -55,21 +54,12 @@ export default async function ConversationPage({
     parts: [{ type: "text", text: row.content }],
   }));
 
-  const modelLabel =
-    AGENT_MODELS.find((model) => model.id === conversation.model)?.label ??
-    conversation.model;
-
-  // Real data for the workspace panel — the user's actual saved
-  // strategies, not a fabricated file list.
-  const strategies = await listStrategies(db, gate.user.id);
-
   return (
     <ChatView
       conversationId={conversationId}
       conversationTitle={conversation.title}
       initialMessages={initialMessages}
-      modelLabel={modelLabel}
-      savedStrategies={strategies.map((s) => ({ id: s.id, title: s.title, code: s.code }))}
+      modelId={resolveAgentModelId(conversation.model)}
     />
   );
 }

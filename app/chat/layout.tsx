@@ -24,7 +24,7 @@ export default async function ChatLayout({
 
   if (gate.status === "unapproved") {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
+      <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
         <h1 className="text-lg font-medium">You&apos;re on the waitlist</h1>
         <p className="mt-3 max-w-sm text-sm text-muted-foreground">
           Thanks for signing up. We&apos;re approving accounts manually while we
@@ -48,10 +48,25 @@ export default async function ChatLayout({
     .where(eq(conversations.userId, gate.user.id))
     .orderBy(desc(conversations.createdAt));
 
+  // Column on phones, row from md up. ConversationSidebar renders two
+  // siblings — a top bar for narrow screens and the desktop rail — and both
+  // land here as flex children. In a row, the top bar became a full-height
+  // vertical strip down the left edge instead of a bar above the content.
+  //
+  // Exactly the viewport, and the window itself never scrolls — every pane
+  // scrolls inside itself instead, the way an editor works. With min-h the
+  // shell grew with the conversation, so ChatView's panes never got a
+  // bounded height and the composer ended up ~1750px below the fold.
+  //
+  // dvh, not vh: on iOS Safari 100vh is the height the page would have if
+  // the browser chrome were hidden, which puts the composer behind it.
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
       <ConversationSidebar conversations={userConversations} userEmail={gate.user.email} />
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+      {/* min-h-0 matters: a flex item defaults to min-height:auto, so without
+          it this column refuses to shrink below its content and grows past
+          the shell instead of letting the panes scroll inside themselves. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }

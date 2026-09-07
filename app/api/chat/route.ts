@@ -8,6 +8,7 @@ import { isMessageTooLong, MAX_MESSAGE_LENGTH } from "@/lib/message-limits";
 import { insertMessage } from "@/lib/messages";
 import { setInitialTitleIfEmpty } from "@/lib/conversations";
 import { generateResponse } from "@/lib/agent/generate-response";
+import { resolveAgentModelId } from "@/lib/agent/models";
 import { db } from "@/lib/db/client";
 import { conversations } from "@/lib/db/schema";
 
@@ -135,7 +136,10 @@ export async function POST(req: Request) {
   // reach the user as a diagnosable message, not an unhandled 500.
   try {
     return await generateResponse({
-      modelId: conversation.model,
+      // Re-validated, not trusted: a conversation started on a model that
+      // has since been removed from the registry would otherwise fail every
+      // request forever. Unknown ids fall back to the current default.
+      modelId: resolveAgentModelId(conversation.model),
       messages: convertToModelMessages(messages),
       onFinish: async ({ text }) => {
         await insertMessage(db, {

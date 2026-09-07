@@ -28,9 +28,12 @@ describe("model registry", () => {
     expect(getAgentModel(REVIEW_MODEL_ID)).toBeDefined();
   });
 
-  it("defaults to an economy model and reviews with a premium one", () => {
-    expect(getAgentModel(DEFAULT_AGENT_MODEL_ID)?.tier).toBe("economy");
-    expect(getAgentModel(REVIEW_MODEL_ID)?.tier).toBe("premium");
+  it("offers only free models for now, so nothing can quietly cost money", () => {
+    for (const model of AGENT_MODELS) {
+      expect(model.provider).toBe("openrouter");
+      expect(model.inputUsdPerMTok).toBe(0);
+      expect(model.outputUsdPerMTok).toBe(0);
+    }
   });
 
   // Gateway diversity is the property we actually want here, but it is not
@@ -60,14 +63,10 @@ describe("resolveAgentModelId", () => {
 });
 
 describe("reviewModelIdFor", () => {
-  it("sends an economy draft to the premium reviewer", () => {
-    expect(reviewModelIdFor("minimax-m3")).toBe(REVIEW_MODEL_ID);
-    expect(reviewModelIdFor("nemotron-ultra")).toBe(REVIEW_MODEL_ID);
-  });
-
-  it("lets a premium model review its own work instead of downgrading it", () => {
-    expect(reviewModelIdFor("claude-opus-5")).toBe("claude-opus-5");
-    expect(reviewModelIdFor("claude-sonnet-4-6")).toBe("claude-sonnet-4-6");
+  it("reviews with whichever model wrote the draft", () => {
+    for (const model of AGENT_MODELS) {
+      expect(reviewModelIdFor(model.id)).toBe(model.id);
+    }
   });
 
   it("uses the premium reviewer for an unknown model id", () => {

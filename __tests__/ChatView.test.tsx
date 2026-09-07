@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { UIMessage } from "ai";
 
@@ -10,6 +10,10 @@ vi.mock("@ai-sdk/react", () => ({
 }));
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+// Server actions cannot run in jsdom; the picker's job here is to report
+// the choice, and this is what it reports to.
+vi.mock("@/app/chat/actions", () => ({ setConversationModel: vi.fn() }));
 
 import { ChatView } from "@/components/ChatView";
 
@@ -24,13 +28,6 @@ const ASSISTANT_MESSAGE: UIMessage = {
   ],
 };
 
-// MessageContent renders both a compact (lg+) and a full (below lg) version
-// of each code block's toolbar, toggled by a CSS breakpoint. jsdom doesn't
-// apply real CSS, so both exist in the test DOM at once — every "per code
-// block" button count below is doubled from what a real, single-breakpoint
-// screenshot would show.
-const BUTTONS_PER_CHAT_CODE_BLOCK = 2;
-
 function setup(messages: UIMessage[] = [ASSISTANT_MESSAGE]) {
   mockUseChat.mockReturnValue({
     messages,
@@ -44,55 +41,31 @@ function setup(messages: UIMessage[] = [ASSISTANT_MESSAGE]) {
       conversationId="c1"
       conversationTitle="ORB breakout strategy"
       initialMessages={messages}
-      modelLabel="Claude Sonnet"
-      savedStrategies={[{ id: "s1", title: "VWAP reversion", code: 'strategy("SavedMarker")' }]}
+      modelId="minimax-m3"
     />,
   );
 }
 
 describe("ChatView workspace + editor panel", () => {
-  it("shows the conversation title and the live conversation's script by default, with a real Run button that is disabled (not fake execution)", () => {
+  it("shows the conversation title and its script, with a real Run button that is disabled (not fake execution)", () => {
     const { container } = setup();
 
     expect(screen.getByRole("heading", { name: "ORB breakout strategy" })).toBeInTheDocument();
 
-    // Appears twice by design: the workspace list item and the editor's
-    // own tab both name the currently open file the same way.
-    expect(screen.getAllByText("this conversation.pine")).toHaveLength(2);
+    // One workspace is one strategy, so the editor tab is named after the
+    // conversation rather than listing files to choose between.
+    expect(screen.getByText("ORB breakout strategy.pine")).toBeInTheDocument();
     expect(container.textContent).toContain("LiveDraftMarker");
 
     const runButton = screen.getByRole("button", { name: /run/i });
     expect(runButton).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("lists real saved strategies in the workspace panel, and switches the editor to one when clicked", async () => {
-    const user = userEvent.setup({ delay: null });
-    const { container } = setup();
-
-    expect(screen.getByText("VWAP reversion.pine")).toBeInTheDocument();
-
-    // Before switching: one "Save strategy" button in the editor panel
-    // (the live, unsaved script) plus the chat message's own code block.
-    expect(screen.getAllByRole("button", { name: /^save strategy$/i })).toHaveLength(
-      1 + BUTTONS_PER_CHAT_CODE_BLOCK,
-    );
-
-    await user.click(screen.getByText("VWAP reversion.pine"));
-
-    expect(container.textContent).toContain("SavedMarker");
-    // Switching the editor to an already-saved file drops its own "Save
-    // strategy" action — it's already saved. Only the chat message's
-    // (unrelated to which file is open) remain.
-    expect(screen.getAllByRole("button", { name: /^save strategy$/i })).toHaveLength(
-      BUTTONS_PER_CHAT_CODE_BLOCK,
-    );
-  });
-
   // Runs slow (~25s) under jsdom for the same reason as
   // ConversationSidebar.test.tsx — the send button is wrapped in a
   // Base UI Tooltip, whose popup positioning retries against jsdom's
   // fake layout engine before giving up and rendering anyway.
-  it("switches back to the live conversation when a new message is sent, even if a saved file was open", async () => {
+  it("sends the draft and clears the input", async () => {
     const user = userEvent.setup({ delay: null });
     const sendMessage = vi.fn();
     mockUseChat.mockReturnValue({
@@ -101,19 +74,14 @@ describe("ChatView workspace + editor panel", () => {
       status: "ready",
       error: undefined,
     });
-
-    const { container } = render(
+    render(
       <ChatView
         conversationId="c1"
         conversationTitle="ORB breakout strategy"
         initialMessages={[ASSISTANT_MESSAGE]}
-        modelLabel="Claude Sonnet"
-        savedStrategies={[{ id: "s1", title: "VWAP reversion", code: 'strategy("SavedMarker")' }]}
+        modelId="minimax-m3"
       />,
     );
-
-    await user.click(screen.getByText("VWAP reversion.pine"));
-    expect(container.textContent).toContain("SavedMarker");
 
     await user.type(
       screen.getByPlaceholderText(/describe a strategy/i),
@@ -122,8 +90,6 @@ describe("ChatView workspace + editor panel", () => {
     await user.click(screen.getByRole("button", { name: /send message/i }));
 
     expect(sendMessage).toHaveBeenCalledWith({ text: "Now make it short-only" });
-    expect(screen.getAllByText("this conversation.pine")).toHaveLength(2);
-    expect(container.textContent).toContain("LiveDraftMarker");
   });
 
   it("shows an empty state when there is no code anywhere yet", () => {
@@ -132,5 +98,91 @@ describe("ChatView workspace + editor panel", () => {
     expect(
       screen.getByText(/the pine script pinedev writes for you will appear here/i),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * On a phone the three panes cannot share the screen, so one fills it at a
+ * time and this bar moves between them. Before it existed, the workspace
+ * and the editor were simply hidden below their breakpoints — you could
+ * open the workspace on a phone and find no workspace in it.
+ */
+describe("ChatView pane switcher", () => {
+  it("offers the code and the chat as destinations", () => {
+    setup();
+
+    const nav = screen.getByRole("navigation", { name: /workspace panes/i });
+    for (const label of ["Code", "Chat"]) {
+      expect(within(nav).getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    // There is no file list any more — one workspace is one strategy.
+    expect(within(nav).queryByRole("button", { name: "Files" })).not.toBeInTheDocument();
+  });
+
+  it("starts on the chat, which is what the page is for", () => {
+    setup();
+
+    const nav = screen.getByRole("navigation", { name: /workspace panes/i });
+    expect(within(nav).getByRole("button", { name: "Chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("moves between panes when one is chosen", async () => {
+    const user = userEvent.setup({ delay: null });
+    setup();
+
+    const nav = screen.getByRole("navigation", { name: /workspace panes/i });
+    await user.click(within(nav).getByRole("button", { name: "Code" }));
+
+    expect(within(nav).getByRole("button", { name: "Code" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(nav).getByRole("button", { name: "Chat" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+});
+
+/**
+ * The chat is a panel you can put away, not a fixed slab that permanently
+ * owns a third of the window — the editor is meant to be the main surface.
+ */
+describe("ChatView chat panel", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it("offers a divider to drag, with the two panes it sits between", () => {
+    setup();
+
+    const separator = screen.getByRole("separator", { name: /resize chat panel/i });
+    expect(separator).toHaveAttribute("aria-orientation", "vertical");
+  });
+
+  it("hides the chat and offers it back", async () => {
+    const user = userEvent.setup({ delay: null });
+    setup();
+
+    await user.click(screen.getByRole("button", { name: /hide chat/i }));
+
+    expect(screen.getByRole("button", { name: /show chat/i })).toBeInTheDocument();
+    // The divider is meaningless with nothing on the other side of it.
+    expect(
+      screen.queryByRole("separator", { name: /resize chat panel/i }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /show chat/i }));
+    expect(screen.getByRole("button", { name: /hide chat/i })).toBeInTheDocument();
+  });
+
+  it("remembers that the chat was hidden", async () => {
+    const user = userEvent.setup({ delay: null });
+    setup();
+
+    await user.click(screen.getByRole("button", { name: /hide chat/i }));
+
+    expect(window.localStorage.getItem("pinedev:chat-collapsed")).toBe("true");
   });
 });

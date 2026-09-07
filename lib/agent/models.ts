@@ -40,8 +40,8 @@ export type AgentModel = {
 export const AGENT_MODELS: AgentModel[] = [
   {
     id: "minimax-m3",
-    label: "MiniMax M3 (free)",
-    description: "Free and fast. The default while the account has no provider credit.",
+    label: "MiniMax M3",
+    description: "Fast and free. The default.",
     provider: "openrouter",
     slug: "minimax/minimax-m3:free",
     tier: "economy",
@@ -50,8 +50,8 @@ export const AGENT_MODELS: AgentModel[] = [
   },
   {
     id: "nemotron-ultra",
-    label: "Nemotron Ultra (free)",
-    description: "Free, larger, slower. Second opinion when MiniMax is unavailable.",
+    label: "Nemotron Ultra",
+    description: "Larger and slower, also free.",
     provider: "openrouter",
     slug: "nvidia/nemotron-3-ultra-550b-a55b:free",
     tier: "economy",
@@ -59,67 +59,14 @@ export const AGENT_MODELS: AgentModel[] = [
     outputUsdPerMTok: 0,
   },
   {
-    id: "deepseek-v3",
-    label: "DeepSeek V3",
-    description: "Cheap and capable. Needs OpenRouter credit.",
+    id: "laguna-s",
+    label: "Laguna S",
+    description: "Code-focused and free. Worth trying when a script comes out wrong.",
     provider: "openrouter",
-    slug: "deepseek/deepseek-chat",
+    slug: "poolside/laguna-s-2.1:free",
     tier: "economy",
-    inputUsdPerMTok: 0.32,
-    outputUsdPerMTok: 0.89,
-  },
-  {
-    id: "claude-sonnet-5",
-    label: "Claude Sonnet 5",
-    description: "Best value for real Pine Script work, and the reviewer for cheap drafts.",
-    provider: "openrouter",
-    slug: "anthropic/claude-sonnet-5",
-    tier: "premium",
-    inputUsdPerMTok: 2,
-    outputUsdPerMTok: 10,
-  },
-  {
-    id: "claude-opus-5",
-    label: "Claude Opus 5",
-    description: "Most capable. For genuinely tricky strategies.",
-    provider: "openrouter",
-    slug: "anthropic/claude-opus-5",
-    tier: "premium",
-    inputUsdPerMTok: 5,
-    outputUsdPerMTok: 25,
-  },
-  // Kept so conversations already pinned to these ids keep working. They
-  // now resolve through OpenRouter rather than Anthropic directly, because
-  // that is where the account's credit lives.
-  {
-    id: "claude-sonnet-4-6",
-    label: "Claude Sonnet 4.6",
-    description: "Previous Sonnet. Kept for conversations that already use it.",
-    provider: "openrouter",
-    slug: "anthropic/claude-sonnet-4.6",
-    tier: "premium",
-    inputUsdPerMTok: 3,
-    outputUsdPerMTok: 15,
-  },
-  {
-    id: "claude-opus-4-6",
-    label: "Claude Opus 4.6",
-    description: "Previous Opus. Kept for conversations that already use it.",
-    provider: "openrouter",
-    slug: "anthropic/claude-opus-4.6",
-    tier: "premium",
-    inputUsdPerMTok: 5,
-    outputUsdPerMTok: 25,
-  },
-  {
-    id: "claude-haiku-4-6",
-    label: "Claude Haiku 4.5",
-    description: "Small, fast Claude. Kept for conversations that already use it.",
-    provider: "openrouter",
-    slug: "anthropic/claude-haiku-4.5",
-    tier: "economy",
-    inputUsdPerMTok: 1,
-    outputUsdPerMTok: 5,
+    inputUsdPerMTok: 0,
+    outputUsdPerMTok: 0,
   },
 ];
 
@@ -138,11 +85,12 @@ export const DEFAULT_AGENT_MODEL_ID = "minimax-m3";
 export const FALLBACK_AGENT_MODEL_ID = "nemotron-ultra";
 
 /**
- * Reviews Pine Script written by an economy model. The review pass is
- * short (a verdict, or one corrected script), so buying quality here costs
- * a fraction of generating the whole reply on a premium model.
+ * The review pass runs on whichever model the conversation is already
+ * using. Every model on offer is free right now, so there is nothing
+ * stronger to hand the check to; once paid models are added, this is where
+ * a dedicated reviewer would go.
  */
-export const REVIEW_MODEL_ID = "claude-sonnet-5";
+export const REVIEW_MODEL_ID = DEFAULT_AGENT_MODEL_ID;
 
 export function getAgentModel(id: string): AgentModel | undefined {
   return AGENT_MODELS.find((model) => model.id === id);
@@ -159,10 +107,11 @@ export function resolveAgentModelId(candidate: unknown): string {
 }
 
 /**
- * Which model should review a draft written by `modelId`. Premium models
- * review their own work; anything cheaper is checked by REVIEW_MODEL_ID,
- * so a cheap draft never ships without a strong pair of eyes on the code.
+ * Which model reviews a draft: the one that wrote it. A model reviewing its
+ * own output catches less than a stronger second opinion would — measured,
+ * the free models approve Pine that does not compile — but with only free
+ * models on offer there is nothing better to escalate to.
  */
 export function reviewModelIdFor(modelId: string): string {
-  return getAgentModel(modelId)?.tier === "premium" ? modelId : REVIEW_MODEL_ID;
+  return getAgentModel(modelId) ? modelId : REVIEW_MODEL_ID;
 }

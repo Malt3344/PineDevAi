@@ -49,38 +49,70 @@ export function StrategyEditorPanel({
     }
   }
 
+  const saveLabel =
+    saveStatus === "saved"
+      ? "Saved"
+      : saveStatus === "error"
+        ? "Failed"
+        : saveStatus === "saving"
+          ? "Saving…"
+          : "Save strategy";
+  const copyLabel = copied ? "Copied" : "Copy";
+
   return (
-    <div className="flex h-full flex-col bg-background">
+    // w-full min-w-0: as a flex child this panel defaults to
+    // min-width:auto and would otherwise stretch to its widest line of
+    // code, dragging the whole phone layout wider than the screen.
+    <div className="flex h-full w-full min-w-0 flex-col bg-background">
       <div className="flex items-center justify-between border-b border-border bg-sidebar">
-        <div className="flex items-center gap-1.5 border-t-2 border-t-primary bg-background px-4 py-2.5 text-sm">
-          <FileCode className="size-4 text-muted-foreground" />
-          {fileName}
+        {/* The tab gives way; the actions do not. On a phone the filename
+            would otherwise push Save, Copy and Run off the right edge, where
+            they cannot be reached at all. */}
+        <div className="flex min-w-0 items-center gap-1.5 border-t-2 border-t-primary bg-background px-4 py-2.5 text-sm">
+          <FileCode className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{fileName}</span>
         </div>
-        <div className="flex items-center gap-1.5 px-2">
+        <div className="flex shrink-0 items-center gap-1.5 px-2">
           {code && onSave && (
-            <Button variant="ghost" size="sm" onClick={handleSave} disabled={saveStatus === "saving"}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSave}
+              disabled={saveStatus === "saving"}
+              aria-label={saveLabel}
+              className="size-11 sm:h-7 sm:w-auto"
+            >
               {saveStatus === "saved" ? <BookmarkCheck /> : <Bookmark />}
-              {saveStatus === "saved"
-                ? "Saved"
-                : saveStatus === "error"
-                  ? "Failed"
-                  : saveStatus === "saving"
-                    ? "Saving…"
-                    : "Save strategy"}
+              <span className="hidden sm:inline">{saveLabel}</span>
             </Button>
           )}
           {code && (
-            <Button variant="ghost" size="sm" onClick={handleCopy}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              aria-label={copyLabel}
+              className="size-11 sm:h-7 sm:w-auto"
+            >
               {copied ? <Check /> : <Copy />}
-              {copied ? "Copied" : "Copy"}
+              <span className="hidden sm:inline">{copyLabel}</span>
             </Button>
           )}
           <Tooltip>
             <TooltipTrigger
-              render={<Button variant="outline" size="sm" disabled focusableWhenDisabled />}
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  focusableWhenDisabled
+                  aria-label="Run"
+                  className="size-11 sm:h-7 sm:w-auto"
+                />
+              }
             >
               <Play />
-              Run
+              <span className="hidden sm:inline">Run</span>
             </TooltipTrigger>
             <TooltipContent>
               Pine Script only runs inside TradingView&apos;s own editor — paste the

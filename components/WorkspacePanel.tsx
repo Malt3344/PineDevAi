@@ -14,6 +14,10 @@ export type SavedStrategy = {
  * library, each shown as a `.pine` file. Selecting one opens it in the
  * editor panel next to it. "This conversation" is always listed first —
  * it's the live script being discussed, before it's ever saved as a file.
+ *
+ * Fills whatever box the parent gives it. Where and whether it appears is
+ * ChatView's decision, because that is what differs between a phone and a
+ * wide screen; the panel itself only renders the list.
  */
 export function WorkspacePanel({
   strategies,
@@ -25,7 +29,7 @@ export function WorkspacePanel({
   onSelect: (id: string | null) => void;
 }) {
   return (
-    <div className="hidden w-48 shrink-0 flex-col border-r border-border bg-sidebar py-3 xl:flex">
+    <div className="flex h-full w-full flex-col overflow-y-auto bg-sidebar py-3">
       <p className="px-3 pb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Workspace
       </p>

@@ -59,7 +59,7 @@ function CodeBlock({
       size="sm"
       onClick={handleSave}
       disabled={saveStatus === "saving"}
-      className="text-xs"
+      className="h-11 text-xs sm:h-7"
     >
       {saveStatus === "saved" ? <BookmarkCheck /> : <Bookmark />}
       {saveStatus === "saved"
@@ -73,7 +73,13 @@ function CodeBlock({
   );
 
   const copyButton = (
-    <Button type="button" variant="ghost" size="sm" onClick={handleCopy} className="text-xs">
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={handleCopy}
+      className="h-11 text-xs sm:h-7"
+    >
       {copied ? <Check /> : <Copy />}
       {copied ? "Copied" : "Copy"}
     </Button>
