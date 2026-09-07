@@ -183,3 +183,47 @@ describe("generateResponse", () => {
     });
   });
 });
+
+describe("empty responses", () => {
+  beforeEach(() => {
+    mockGenerateText.mockReset();
+    vi.mocked(languageModelFor).mockClear();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  it("treats an empty draft as a failure and falls through to the next model", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "   ", usage: USAGE })
+      .mockResolvedValueOnce({ text: "a real answer", usage: USAGE });
+
+    const response = await generateResponse({
+      modelId: DEFAULT_AGENT_MODEL_ID,
+      messages: [],
+    });
+
+    expect(languageModelFor).toHaveBeenNthCalledWith(2, FALLBACK_AGENT_MODEL_ID);
+    await expect(readStreamedText(response)).resolves.toBe("a real answer");
+  });
+
+  it("does not bill a model for an empty response", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "", usage: USAGE })
+      .mockResolvedValueOnce({ text: "a real answer", usage: USAGE });
+    const onUsage = vi.fn();
+
+    await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
+
+    expect(onUsage).toHaveBeenCalledTimes(1);
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: FALLBACK_AGENT_MODEL_ID }),
+    );
+  });
+
+  it("errors rather than streaming nothing when every model comes back empty", async () => {
+    mockGenerateText
+      .mockResolvedValueOnce({ text: "", usage: USAGE })
+      .mockResolvedValueOnce({ text: "", usage: USAGE });
+
+    await expect(generateResponse({ messages: [] })).rejects.toThrow(/empty response/);
+  });
+});

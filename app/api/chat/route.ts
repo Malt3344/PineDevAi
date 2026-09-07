@@ -129,21 +129,42 @@ export async function POST(req: Request) {
   // 5. Generate and self-review the assistant's reply, persisting it
   // server-side before it streams to the client. The client never writes
   // assistant messages.
-  return generateResponse({
-    modelId: conversation.model,
-    messages: convertToModelMessages(messages),
-    onFinish: async ({ text }) => {
-      await insertMessage(db, {
-        conversationId,
-        userId: user.id,
-        role: "assistant",
-        content: text,
-      });
-    },
-    // Fires once per model call that actually happened — including the
-    // review pass, and the fallback model when the primary was skipped.
-    onUsage: async (event) => {
-      await recordUsage(db, { userId: user.id, ...event });
-    },
-  });
+  //
+  // Every model in the chain can still fail together — an unfunded or
+  // misconfigured provider fails identically for all of them. That must
+  // reach the user as a diagnosable message, not an unhandled 500.
+  try {
+    return await generateResponse({
+      modelId: conversation.model,
+      messages: convertToModelMessages(messages),
+      onFinish: async ({ text }) => {
+        await insertMessage(db, {
+          conversationId,
+          userId: user.id,
+          role: "assistant",
+          content: text,
+        });
+      },
+      // Fires once per model call that actually happened — including the
+      // review pass, and the fallback model when the primary was skipped.
+      onUsage: async (event) => {
+        await recordUsage(db, { userId: user.id, ...event });
+      },
+    });
+  } catch (error) {
+    // The real cause goes to the server log, where it is readable; the
+    // client gets something honest but free of internal detail.
+    console.error("Chat generation failed", error);
+    const isConfig =
+      error instanceof Error && /API_KEY is not set|Unknown model id/.test(error.message);
+
+    return NextResponse.json(
+      {
+        error: isConfig
+          ? "The model provider is not configured. This is a server-side problem, not something you did."
+          : "The model provider could not be reached. Please try again in a moment.",
+      },
+      { status: 502 },
+    );
+  }
 }

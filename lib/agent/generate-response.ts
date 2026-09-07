@@ -76,6 +76,13 @@ export async function generateResponse({
         system: SYSTEM_PROMPT,
         messages,
       });
+      // A model that returns nothing has not succeeded, however cleanly it
+      // returned. Free models do this intermittently, and without treating
+      // it as a failure the fallback never runs and the user is handed an
+      // empty reply.
+      if (result.text.trim() === "") {
+        throw new Error(`Model ${id} returned an empty response.`);
+      }
       return { ...result, servedByModelId: id };
     },
     (failedModelId, error) =>
