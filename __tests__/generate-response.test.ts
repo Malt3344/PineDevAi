@@ -37,6 +37,27 @@ async function readStreamedText(response: Response): Promise<string> {
 const DRAFT_WITH_CODE = 'Here you go:\n```pine\nstrategy("broken")\n```';
 const USAGE = { inputTokens: 100, outputTokens: 50 };
 
+/**
+ * The real generateText result exposes `text` and `usage` as prototype
+ * getters, not own properties — so `{ ...result }` silently drops both.
+ * A plain-object mock hides that entire class of bug, and did: it let a
+ * spread ship to production that turned every reply into undefined. These
+ * mocks reproduce the getter shape so the tests feel what the SDK does.
+ */
+function sdkResult(fields: { text: string; usage?: typeof USAGE }) {
+  return Object.create(
+    {
+      get text() {
+        return fields.text;
+      },
+      get usage() {
+        return fields.usage;
+      },
+    },
+    { steps: { value: [], enumerable: true } },
+  );
+}
+
 describe("generateResponse", () => {
   beforeEach(() => {
     mockGenerateText.mockReset();
@@ -49,7 +70,7 @@ describe("generateResponse", () => {
   });
 
   it("defaults to the default model, and returns the draft unchanged when there is no code to review", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "Repainting means...", usage: USAGE });
+    mockGenerateText.mockResolvedValueOnce(sdkResult({ text: "Repainting means...", usage: USAGE }));
 
     const response = await generateResponse({ messages: [] });
 
@@ -63,7 +84,7 @@ describe("generateResponse", () => {
 
   it("runs a real second review pass and streams the corrected code when the reviewer finds a problem", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+      .mockResolvedValueOnce(sdkResult({ text: DRAFT_WITH_CODE, usage: USAGE }))
       .mockResolvedValueOnce({
         text: '```pine\n//@version=6\nstrategy("fixed")\n```',
         usage: USAGE,
@@ -83,8 +104,8 @@ describe("generateResponse", () => {
 
   it("sends a cheap model's code to the premium reviewer, so an economy draft is still checked properly", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
-      .mockResolvedValueOnce({ text: "OK", usage: USAGE });
+      .mockResolvedValueOnce(sdkResult({ text: DRAFT_WITH_CODE, usage: USAGE }))
+      .mockResolvedValueOnce(sdkResult({ text: "OK", usage: USAGE }));
 
     await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [] });
 
@@ -93,7 +114,7 @@ describe("generateResponse", () => {
   });
 
   it("calls onFinish with the final (possibly corrected) text before the client-facing stream starts", async () => {
-    mockGenerateText.mockResolvedValueOnce({ text: "hello", usage: USAGE });
+    mockGenerateText.mockResolvedValueOnce(sdkResult({ text: "hello", usage: USAGE }));
     const onFinish = vi.fn();
 
     await generateResponse({ messages: [], onFinish });
@@ -105,7 +126,7 @@ describe("generateResponse", () => {
     it("serves the reply from the fallback model when the primary provider fails", async () => {
       mockGenerateText
         .mockRejectedValueOnce(new Error("429 rate limited"))
-        .mockResolvedValueOnce({ text: "from the fallback", usage: USAGE });
+        .mockResolvedValueOnce(sdkResult({ text: "from the fallback", usage: USAGE }));
 
       const response = await generateResponse({
         modelId: DEFAULT_AGENT_MODEL_ID,
@@ -120,7 +141,7 @@ describe("generateResponse", () => {
     it("bills the fallback model, not the one that failed", async () => {
       mockGenerateText
         .mockRejectedValueOnce(new Error("provider down"))
-        .mockResolvedValueOnce({ text: "from the fallback", usage: USAGE });
+        .mockResolvedValueOnce(sdkResult({ text: "from the fallback", usage: USAGE }));
       const onUsage = vi.fn();
 
       await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
@@ -143,7 +164,7 @@ describe("generateResponse", () => {
 
     it("still delivers the draft when the review pass fails, rather than crashing the chat", async () => {
       mockGenerateText
-        .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
+        .mockResolvedValueOnce(sdkResult({ text: DRAFT_WITH_CODE, usage: USAGE }))
         .mockRejectedValueOnce(new Error("reviewer unavailable"));
 
       const response = await generateResponse({ messages: [] });
@@ -155,8 +176,8 @@ describe("generateResponse", () => {
   describe("usage reporting", () => {
     it("reports the draft and the review as separate calls, each against the model that ran it", async () => {
       mockGenerateText
-        .mockResolvedValueOnce({ text: DRAFT_WITH_CODE, usage: USAGE })
-        .mockResolvedValueOnce({ text: "OK", usage: { inputTokens: 20, outputTokens: 1 } });
+        .mockResolvedValueOnce(sdkResult({ text: DRAFT_WITH_CODE, usage: USAGE }))
+        .mockResolvedValueOnce(sdkResult({ text: "OK", usage: { inputTokens: 20, outputTokens: 1 } }));
       const onUsage = vi.fn();
 
       await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
@@ -174,7 +195,7 @@ describe("generateResponse", () => {
     });
 
     it("does not report a review that never ran", async () => {
-      mockGenerateText.mockResolvedValueOnce({ text: "no code here", usage: USAGE });
+      mockGenerateText.mockResolvedValueOnce(sdkResult({ text: "no code here", usage: USAGE }));
       const onUsage = vi.fn();
 
       await generateResponse({ messages: [], onUsage });
@@ -193,8 +214,8 @@ describe("empty responses", () => {
 
   it("treats an empty draft as a failure and falls through to the next model", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "   ", usage: USAGE })
-      .mockResolvedValueOnce({ text: "a real answer", usage: USAGE });
+      .mockResolvedValueOnce(sdkResult({ text: "   ", usage: USAGE }))
+      .mockResolvedValueOnce(sdkResult({ text: "a real answer", usage: USAGE }));
 
     const response = await generateResponse({
       modelId: DEFAULT_AGENT_MODEL_ID,
@@ -207,8 +228,8 @@ describe("empty responses", () => {
 
   it("does not bill a model for an empty response", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "", usage: USAGE })
-      .mockResolvedValueOnce({ text: "a real answer", usage: USAGE });
+      .mockResolvedValueOnce(sdkResult({ text: "", usage: USAGE }))
+      .mockResolvedValueOnce(sdkResult({ text: "a real answer", usage: USAGE }));
     const onUsage = vi.fn();
 
     await generateResponse({ modelId: DEFAULT_AGENT_MODEL_ID, messages: [], onUsage });
@@ -221,8 +242,8 @@ describe("empty responses", () => {
 
   it("errors rather than streaming nothing when every model comes back empty", async () => {
     mockGenerateText
-      .mockResolvedValueOnce({ text: "", usage: USAGE })
-      .mockResolvedValueOnce({ text: "", usage: USAGE });
+      .mockResolvedValueOnce(sdkResult({ text: "", usage: USAGE }))
+      .mockResolvedValueOnce(sdkResult({ text: "", usage: USAGE }));
 
     await expect(generateResponse({ messages: [] })).rejects.toThrow(/empty response/);
   });

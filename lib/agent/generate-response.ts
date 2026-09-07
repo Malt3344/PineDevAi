@@ -83,7 +83,10 @@ export async function generateResponse({
       if (result.text.trim() === "") {
         throw new Error(`Model ${id} returned an empty response.`);
       }
-      return { ...result, servedByModelId: id };
+      // Read the fields out explicitly. The SDK exposes `text` and `usage`
+      // as prototype getters, so spreading the result silently produces an
+      // object where both are undefined.
+      return { text: result.text, usage: result.usage, servedByModelId: id };
     },
     (failedModelId, error) =>
       console.warn(`Model ${failedModelId} failed, falling back.`, error),
