@@ -28,7 +28,7 @@ describe("LoginPage default mode", () => {
 
     render(<LoginPage />);
 
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
     expect(screen.getByText(/new here\?/i)).toBeInTheDocument();
   });
 
@@ -37,7 +37,7 @@ describe("LoginPage default mode", () => {
 
     render(<LoginPage />);
 
-    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByText(/already have an account\?/i)).toBeInTheDocument();
   });
 });

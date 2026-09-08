@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Check, Copy } from "lucide-react";
+import Link from "next/link";
+import { BookmarkPlus, Check, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 type Strategy = {
   id: string;
@@ -55,10 +57,16 @@ function StrategyCard({ strategy }: { strategy: Strategy }) {
 export function StrategyList({ strategies }: { strategies: Strategy[] }) {
   if (strategies.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No saved strategies yet. Save a script from the chat with the
-        &quot;Save strategy&quot; button on any code block.
-      </p>
+      <EmptyState
+        icon={BookmarkPlus}
+        title="No saved strategies yet"
+        description="Every script the agent writes has a Save button. Saved ones land here, so you can find them again without scrolling back through a conversation."
+        action={
+          <Button asChild>
+<Link href="/chat">Start a strategy</Link>
+</Button>
+        }
+      />
     );
   }
 

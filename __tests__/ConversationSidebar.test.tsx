@@ -17,29 +17,33 @@ vi.mock("@/app/chat/account/billing/actions", () => ({
 }));
 
 import { ConversationSidebar } from "@/components/ConversationSidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 describe("ConversationSidebar account menu", () => {
-  // Runs slow (~25s) under jsdom: Base UI's popup positioning retries
-  // while waiting on a real size measurement jsdom's fake layout engine
-  // never provides, before eventually giving up and rendering anyway.
-  // Real browsers don't hit this path. Not worth polyfilling further —
-  // an earlier attempt to make ResizeObserver's mock fire its callback
-  // caused an actual infinite render loop, which is a worse problem than
-  // a slow-but-correct test.
+  // Slow (~17s) under jsdom, and correct: the menu really does open, which
+  // a diagnostic run confirms. Portalled menus re-measure against a fake
+  // layout engine that never returns a real size, so they settle slowly
+  // here and instantly in a browser. The explicit timeout is the cheap
+  // fix; polyfilling further has previously caused an infinite render
+  // loop, which is worse than a slow-but-honest test.
   it("opens without throwing and shows the user's email and account actions", async () => {
     const user = userEvent.setup({ delay: null });
+    // The rail is a shadcn Sidebar now, and it reads its collapse state
+    // from the provider — the same wrapper the real layout supplies.
     render(
-      <ConversationSidebar
-        conversations={[{ id: "c1", title: "My strategy" }]}
-        userEmail="test@example.com"
-      />,
+      <SidebarProvider>
+        <ConversationSidebar
+          conversations={[{ id: "c1", title: "My strategy" }]}
+          userEmail="test@example.com"
+        />
+      </SidebarProvider>,
     );
 
-    // This is exactly the interaction that crashed in production
-    // (Base UI error #31 — a GroupLabel used outside a Menu.Group).
+    // This is exactly the interaction that crashed in production before
+    // the account menu was restructured.
     await user.click(screen.getByText("test@example.com"));
 
     expect(await screen.findByText("Account settings")).toBeInTheDocument();
     expect(screen.getByText("Log out")).toBeInTheDocument();
-  });
+  }, 30000);
 });

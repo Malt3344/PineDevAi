@@ -51,9 +51,9 @@ export default function ResetPasswordPage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 You&apos;re signed in with your new password.
               </p>
-              <Button className="mt-4 w-full" nativeButton={false} render={<Link href="/chat" />}>
-                Go to chat
-              </Button>
+              <Button className="mt-4 w-full" asChild>
+<Link href="/chat">Go to chat</Link>
+</Button>
             </CardContent>
           </Card>
         </div>

@@ -12,7 +12,12 @@ import { resolveAgentModelId } from "@/lib/agent/models";
 import { db } from "@/lib/db/client";
 import { conversations } from "@/lib/db/schema";
 
-export const maxDuration = 60;
+// A turn is two model calls — the draft, then the review pass — and the
+// free models measure 30-40s each, so 60s was not enough and every reply
+// timed out. Vercel clamps this to whatever the plan allows (60s on Hobby,
+// 300s on Pro), so on Hobby the review pass is what has to go, not this
+// number.
+export const maxDuration = 300;
 
 /** Extracts the plain-text content of the most recent user message. */
 function extractLastUserText(messages: UIMessage[]): string | null {
@@ -49,7 +54,12 @@ export async function POST(req: Request) {
 
   const { user } = gateResult;
 
-  let body: { messages?: UIMessage[]; conversationId?: string };
+  let body: {
+    messages?: UIMessage[];
+    conversationId?: string;
+    mode?: unknown;
+    thinking?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -57,6 +67,9 @@ export async function POST(req: Request) {
   }
 
   const { messages, conversationId } = body;
+  // Both come from the client, so both are narrowed rather than trusted.
+  const mode = body.mode === "plan" ? "plan" : "act";
+  const thinking = body.thinking === true;
 
   if (!conversationId || typeof conversationId !== "string") {
     return NextResponse.json({ error: "Missing conversationId." }, { status: 400 });
@@ -140,6 +153,8 @@ export async function POST(req: Request) {
       // has since been removed from the registry would otherwise fail every
       // request forever. Unknown ids fall back to the current default.
       modelId: resolveAgentModelId(conversation.model),
+      mode,
+      thinking,
       messages: convertToModelMessages(messages),
       onFinish: async ({ text }) => {
         await insertMessage(db, {

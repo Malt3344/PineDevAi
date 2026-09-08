@@ -113,7 +113,7 @@ describe("recordUsage", () => {
 
     await recordUsage(db, {
       userId: "u1",
-      modelId: "minimax-m3",
+      modelId: "nemotron-ultra",
       inputTokens: 1_000_000,
       outputTokens: 0,
     });
@@ -121,7 +121,7 @@ describe("recordUsage", () => {
     expect(values).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "u1",
-        modelId: "minimax-m3",
+        modelId: "nemotron-ultra",
         inputTokens: 1_000_000,
         costMicroUsd: 0,
       }),

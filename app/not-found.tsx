@@ -10,9 +10,9 @@ export default function NotFound() {
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         The page you&apos;re looking for doesn&apos;t exist or may have moved.
       </p>
-      <Button className="mt-6" nativeButton={false} render={<Link href="/" />}>
-        Back to PineDev
-      </Button>
+      <Button className="mt-6" asChild>
+<Link href="/">Back to PineDev</Link>
+</Button>
     </main>
   );
 }

@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { conversations } from "@/lib/db/schema";
+import { CommandPalette } from "@/components/CommandPalette";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { signOutAction } from "@/app/chat/actions";
 import { startCheckoutAction } from "@/app/chat/account/billing/actions";
 import { Button } from "@/components/ui/button";
@@ -48,25 +50,24 @@ export default async function ChatLayout({
     .where(eq(conversations.userId, gate.user.id))
     .orderBy(desc(conversations.createdAt));
 
-  // Column on phones, row from md up. ConversationSidebar renders two
-  // siblings — a top bar for narrow screens and the desktop rail — and both
-  // land here as flex children. In a row, the top bar became a full-height
-  // vertical strip down the left edge instead of a bar above the content.
+  // shadcn's SidebarProvider owns the rail: collapse state (persisted in a
+  // cookie so it survives a reload without a flash), the mobile sheet, and
+  // the ⌘B shortcut. SidebarInset is the content pane beside it.
   //
-  // Exactly the viewport, and the window itself never scrolls — every pane
-  // scrolls inside itself instead, the way an editor works. With min-h the
-  // shell grew with the conversation, so ChatView's panes never got a
-  // bounded height and the composer ended up ~1750px below the fold.
-  //
-  // dvh, not vh: on iOS Safari 100vh is the height the page would have if
-  // the browser chrome were hidden, which puts the composer behind it.
+  // h-dvh, not vh: on iOS Safari 100vh is the height the page would have if
+  // the browser chrome were hidden, which puts the composer behind it. The
+  // window itself never scrolls — every pane scrolls inside itself, the way
+  // an editor does.
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background md:flex-row">
+    <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
+      <CommandPalette conversations={userConversations} />
       <ConversationSidebar conversations={userConversations} userEmail={gate.user.email} />
-      {/* min-h-0 matters: a flex item defaults to min-height:auto, so without
-          it this column refuses to shrink below its content and grows past
-          the shell instead of letting the panes scroll inside themselves. */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
-    </div>
+      {/* min-h-0: a flex item defaults to min-height:auto and would refuse
+          to shrink below its content, growing past the shell instead of
+          letting the panes scroll inside themselves. */}
+      <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

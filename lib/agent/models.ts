@@ -39,19 +39,9 @@ export type AgentModel = {
  */
 export const AGENT_MODELS: AgentModel[] = [
   {
-    id: "minimax-m3",
-    label: "MiniMax M3",
-    description: "Fast and free. The default.",
-    provider: "openrouter",
-    slug: "minimax/minimax-m3:free",
-    tier: "economy",
-    inputUsdPerMTok: 0,
-    outputUsdPerMTok: 0,
-  },
-  {
     id: "nemotron-ultra",
     label: "Nemotron Ultra",
-    description: "Larger and slower, also free.",
+    description: "Large and free. The most reliable of the free models on Pine.",
     provider: "openrouter",
     slug: "nvidia/nemotron-3-ultra-550b-a55b:free",
     tier: "economy",
@@ -59,11 +49,21 @@ export const AGENT_MODELS: AgentModel[] = [
     outputUsdPerMTok: 0,
   },
   {
-    id: "laguna-s",
-    label: "Laguna S",
-    description: "Code-focused and free. Worth trying when a script comes out wrong.",
+    id: "dots-note",
+    label: "Dots Note",
+    description: "Faster and free. Good for small edits to an existing script.",
     provider: "openrouter",
-    slug: "poolside/laguna-s-2.1:free",
+    slug: "dots-studio/dots-3-note-preview:free",
+    tier: "economy",
+    inputUsdPerMTok: 0,
+    outputUsdPerMTok: 0,
+  },
+  {
+    id: "ling-flash",
+    label: "Ling Flash",
+    description: "Quickest and free. Best when you want an answer immediately.",
+    provider: "openrouter",
+    slug: "inclusionai/ling-3.0-flash-fin:free",
     tier: "economy",
     inputUsdPerMTok: 0,
     outputUsdPerMTok: 0,
@@ -71,7 +71,7 @@ export const AGENT_MODELS: AgentModel[] = [
 ];
 
 /** Default for new conversations: cheap, and good enough for most turns. */
-export const DEFAULT_AGENT_MODEL_ID = "minimax-m3";
+export const DEFAULT_AGENT_MODEL_ID = "nemotron-ultra";
 
 /**
  * Tried when the primary model errors or is rate limited.
@@ -82,7 +82,7 @@ export const DEFAULT_AGENT_MODEL_ID = "minimax-m3";
  * fail every time it was reached. Point this at an "anthropic" provider
  * model once that account is funded.
  */
-export const FALLBACK_AGENT_MODEL_ID = "nemotron-ultra";
+export const FALLBACK_AGENT_MODEL_ID = "dots-note";
 
 /**
  * The review pass runs on whichever model the conversation is already

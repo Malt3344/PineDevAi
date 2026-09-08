@@ -14,9 +14,9 @@ export default function ChatNotFound() {
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         This conversation doesn&apos;t exist, or you don&apos;t have access to it.
       </p>
-      <Button className="mt-6" nativeButton={false} render={<Link href="/chat" />}>
-        Start a new chat
-      </Button>
+      <Button className="mt-6" asChild>
+<Link href="/chat">Start a new chat</Link>
+</Button>
     </main>
   );
 }

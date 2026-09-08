@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/*
+ ---break---
+ */
+@custom-variant dark (&:is(.dark *));
 
 /*
  * PineDev is dark-only by design — no light mode, no toggle. The palette
@@ -9,7 +13,7 @@
  */
 :root,
 .dark {
-  --background: #0a0e0d;
+  --background: #070a09;
   --foreground: #e9efed;
 
   --card: #0f1413;
@@ -34,13 +38,19 @@
   --destructive: #f0715a;
   --destructive-foreground: #1a0805;
 
-  --border: #1f2726;
+  --border: #1c2423;
   --input: #1f2726;
   --ring: #2dd4a7;
 
   --radius: 0.625rem;
 
-  --sidebar: #0f1413;
+  /* Surface levels. The editor sits at --background, the deepest plane;
+     the two rails either side of it are raised. That single relationship
+     is what stops the three panels reading as one flat sheet. */
+  --surface-raised: #0f1514;
+  --surface-overlay: #18211f;
+
+  --sidebar: #070a09;
   --sidebar-foreground: #e9efed;
   --sidebar-primary: #2dd4a7;
   --sidebar-primary-foreground: #04120e;
@@ -77,6 +87,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -126,4 +138,34 @@ html {
   transition:
     opacity 150ms ease,
     background-color 150ms ease;
+}
+
+/*
+ ---break---
+ */
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+/*
+ ---break---
+ */
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }

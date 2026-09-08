@@ -56,3 +56,34 @@ Element.prototype.getBoundingClientRect = () => ({
 // Base UI (like Radix) checks for the Web Animations API on scrollable
 // viewports; jsdom doesn't implement it.
 Element.prototype.getAnimations = Element.prototype.getAnimations ?? (() => []);
+
+// Radix's menus and selects drive open/close through the Pointer Events
+// capture API and scroll the active item into view. jsdom implements
+// neither, so opening one hangs until the test times out rather than
+// failing with something that names the cause. These are the standard
+// polyfills for testing Radix under jsdom.
+if (typeof window !== "undefined") {
+  Element.prototype.hasPointerCapture =
+    Element.prototype.hasPointerCapture ?? (() => false);
+  Element.prototype.setPointerCapture = Element.prototype.setPointerCapture ?? (() => {});
+  Element.prototype.releasePointerCapture =
+    Element.prototype.releasePointerCapture ?? (() => {});
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+}
+
+// jsdom has no media query engine, and shadcn's use-mobile hook (which the
+// Sidebar depends on to decide between the rail and the mobile sheet) calls
+// matchMedia unconditionally. Reports "not mobile", which is the desktop
+// rail — the branch these tests are about.
+if (typeof window !== "undefined" && typeof window.matchMedia !== "function") {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}

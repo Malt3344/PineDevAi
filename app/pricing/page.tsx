@@ -31,9 +31,9 @@ export default function PricingPage() {
         <Link href="/" className="text-sm font-semibold tracking-tight">
           PineDev
         </Link>
-        <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
-          Log in
-        </Button>
+        <Button variant="ghost" size="sm" asChild>
+<Link href="/login">Log in</Link>
+</Button>
       </header>
 
       <main className="flex-1 px-6 py-16">

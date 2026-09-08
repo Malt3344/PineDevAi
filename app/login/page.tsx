@@ -5,6 +5,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -203,105 +209,129 @@ function LoginForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 py-16">
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Welcome to{" "}
-          <Link href="/" className="text-primary">
-            PineDev
-          </Link>
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {mode === "sign-up" ? "Create your account to get started" : "Sign in to continue"}
-        </p>
-
-        <Card className="mt-8 overflow-hidden py-0 text-left">
-          <CardContent className="space-y-4 py-6">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-11"
-              disabled={status === "loading"}
-              onClick={handleGoogle}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </Button>
-
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <Separator className="flex-1" />
-            </div>
-
-            {status === "error" && (
-              <p className="text-sm text-destructive">{errorMessage}</p>
-            )}
-
-            <form onSubmit={handlePassword} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  {mode === "sign-in" && (
-                    <button
-                      type="button"
-                      onClick={() => setMode("forgot-password")}
-                      className="text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
+    // shadcn's login-04 shape: one card, the form on the left and a panel
+    // on the right saying what the product is, so the page reads as a front
+    // door rather than a lone box floating in the dark.
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-background p-6">
+      <div className="w-full max-w-4xl">
+        <Card className="overflow-hidden p-0">
+          <CardContent className="grid p-0 md:grid-cols-2">
+            <form onSubmit={handlePassword} className="p-6 md:p-8">
+              <FieldGroup>
+                <div className="flex flex-col gap-1.5">
+                  <h1 className="text-2xl font-semibold tracking-tight">
+                    {mode === "sign-up" ? "Create your account" : "Welcome back"}
+                  </h1>
+                  <p className="text-sm text-balance text-muted-foreground">
+                    {mode === "sign-up"
+                      ? "Describe a strategy and get working Pine Script v6 back."
+                      : "Sign in to pick up where you left off."}
+                  </p>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={8}
-                  autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  className="h-11"
-                />
-              </div>
-              <Button type="submit" disabled={status === "loading"} className="w-full h-11">
-                {status === "loading"
-                  ? "Please wait…"
-                  : mode === "sign-up"
-                    ? "Continue"
-                    : "Sign in"}
-              </Button>
-            </form>
-          </CardContent>
 
-          <button
-            type="button"
-            onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
-            className="w-full border-t border-border bg-muted/40 py-4 text-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            {mode === "sign-up" ? (
-              <>
-                Already have an account? <span className="font-medium text-foreground">Sign in</span>
-              </>
-            ) : (
-              <>
-                New here? <span className="font-medium text-foreground">Create an account</span>
-              </>
-            )}
-          </button>
+                {status === "error" && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {errorMessage}
+                  </p>
+                )}
+
+                <Field>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                </Field>
+
+                <Field>
+                  <div className="flex items-center">
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    {mode === "sign-in" && (
+                      <button
+                        type="button"
+                        onClick={() => setMode("forgot-password")}
+                        className="ml-auto text-sm text-muted-foreground underline-offset-4 hover:underline"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </Field>
+
+                <Field>
+                  <Button type="submit" disabled={status === "loading"}>
+                    {status === "loading"
+                      ? "Please wait…"
+                      : mode === "sign-up"
+                        ? "Create account"
+                        : "Sign in"}
+                  </Button>
+                </Field>
+
+                <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+                  Or continue with
+                </FieldSeparator>
+
+                <Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={status === "loading"}
+                    onClick={handleGoogle}
+                  >
+                    <GoogleIcon />
+                    Google
+                  </Button>
+                </Field>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  {mode === "sign-up" ? "Already have an account?" : "New here?"}{" "}
+                  <button
+                    type="button"
+                    onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
+                    className="font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {mode === "sign-up" ? "Sign in" : "Create an account"}
+                  </button>
+                </p>
+              </FieldGroup>
+            </form>
+
+            {/* Hidden on phones, where it would only push the form below
+                the fold. */}
+            <div className="hidden flex-col justify-between bg-surface-raised p-8 md:flex">
+              <Link href="/" className="text-sm font-semibold tracking-tight">
+                PineDev
+              </Link>
+              <div>
+                <p className="text-xl font-semibold tracking-tight text-balance">
+                  Describe your strategy. Get working Pine Script v6.
+                </p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  An agent that writes and fixes TradingView Pine Script, checks
+                  it against the v6 rules, and hands you something you can paste
+                  straight into the editor.
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Paste a compiler error and get the corrected script back.
+              </p>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </main>

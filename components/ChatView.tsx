@@ -5,21 +5,48 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import {
   ArrowUp,
+  Brain,
   Check,
   ChevronDown,
   FileCode,
+  ListChecks,
   MessageSquare,
   PanelRightClose,
   PanelRightOpen,
+  Paperclip,
+  Pencil,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { AgentStatusLine } from "@/components/AgentStatusLine";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import { Message, MessageContent as MessageBubble } from "@/components/ai-elements/message";
 import { MessageContent } from "@/components/MessageContent";
+import {
+  PromptInput,
+  PromptInputActionAddAttachments,
+  PromptInputActionMenu,
+  PromptInputActionMenuContent,
+  PromptInputActionMenuTrigger,
+  PromptInputBody,
+  PromptInputButton,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input";
 import { StrategyEditorPanel } from "@/components/StrategyEditorPanel";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { AGENT_MODELS } from "@/lib/agent/models";
+import type { AgentMode, AgentStatus } from "@/lib/agent/generate-response";
 import { setConversationModel } from "@/app/chat/actions";
 import {
   DropdownMenu,
@@ -45,6 +72,14 @@ const PANES: { id: Pane; label: string; icon: typeof FileCode }[] = [
 ];
 
 /**
+ * What the attach control accepts. Text-shaped files are inlined into the
+ * message as a fenced block, which every model can read — no upload
+ * pipeline, and the file stays visible in the transcript.
+ */
+const ATTACHABLE = ".pine,.txt,.csv,.json,.md,.log,.js,.ts,.py,text/*";
+const MAX_ATTACHMENT_BYTES = 128 * 1024;
+
+/**
  * Width bounds for the chat panel, in pixels. The minimum is where a
  * wrapped code block in a message stops being readable; the editor keeps
  * EDITOR_MIN_WIDTH no matter how far the divider is dragged, so neither
@@ -57,6 +92,13 @@ const EDITOR_MIN_WIDTH = 360;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+/** Reads an attached file's text, whether it arrives as a blob or a data URL. */
+async function fileText(file: { url?: string }): Promise<string> {
+  if (!file.url) return "";
+  const res = await fetch(file.url);
+  return res.text();
 }
 
 /** Concatenates a UIMessage's text parts into a single plain-text string. */
@@ -84,12 +126,15 @@ export function ChatView({
   initialMessages: UIMessage[];
   modelId: string;
 }) {
-  const [input, setInput] = useState("");
   const [pane, setPane] = useState<Pane>("chat");
   // Held locally so the label changes the instant it is picked; the server
   // action is what actually decides which model the next request uses.
   const [activeModelId, setActiveModelId] = useState(modelId);
   const activeModel = AGENT_MODELS.find((m) => m.id === activeModelId);
+  const [mode, setMode] = useState<AgentMode>("act");
+  const [thinking, setThinking] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+
   const [chatWidth, setChatWidth] = usePersistedState(
     "pinedev:chat-width",
     CHAT_DEFAULT_WIDTH,
@@ -157,6 +202,28 @@ export function ChatView({
     };
   }, [dragging, endDrag]);
 
+  /**
+   * Attachments arrive as files and go into the message as fenced blocks:
+   * the model reads them like any other paste, and they stay visible in
+   * the transcript rather than disappearing into an opaque upload.
+   */
+  async function handlePromptSubmit(message: PromptInputMessage) {
+    const trimmed = (message.text ?? "").trim();
+    if (!trimmed || isBusy) return;
+
+    const parts: string[] = [trimmed];
+    for (const file of message.files ?? []) {
+      try {
+        const text = await fileText(file);
+        parts.push(`\n\nAttached — ${file.filename ?? "file"}:\n\n\`\`\`\n${text}\n\`\`\``);
+      } catch {
+        toast.error(`Could not read ${file.filename ?? "that file"}.`);
+      }
+    }
+
+    sendMessage({ text: parts.join("") }, { body: { mode, thinking } });
+  }
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -170,27 +237,30 @@ export function ChatView({
     id: conversationId,
     messages: initialMessages,
     transport,
+    // The server reports each real stage of the turn as a transient data
+    // part; this is where they land.
+    onData: (part) => {
+      if (part.type === "data-status") setAgentStatus(part.data as AgentStatus);
+    },
   });
 
   const isBusy = status === "submitted" || status === "streaming";
-  const latestCode = extractLatestCodeBlock(messages.map(messageText));
+
+  // Clear the status once the turn is over, so a finished reply is not left
+  // sitting under a stale "reviewing" line.
+  useEffect(() => {
+    if (!isBusy) setAgentStatus(null);
+  }, [isBusy]);
+  // Assistant messages only. Pasting a script or a compiler error into the
+  // chat is a normal thing to do, and reading code out of user messages put
+  // the user's own paste into the editor as though the agent had written it.
+  const latestCode = extractLatestCodeBlock(
+    messages.filter((m) => m.role === "assistant").map(messageText),
+  );
 
   // One workspace is one strategy: the editor always shows this
   // conversation's own script, named after it.
   const fileName = `${conversationTitle || "untitled"}.pine`;
-
-  /** Sends the current draft, if non-empty and no generation is in flight. */
-  function submitDraft() {
-    const trimmed = input.trim();
-    if (!trimmed || isBusy) return;
-    sendMessage({ text: trimmed });
-    setInput("");
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    submitDraft();
-  }
 
   /** Saves a code block from an assistant message into the user's strategy library. */
   async function handleSaveCode(code: string) {
@@ -214,7 +284,7 @@ export function ChatView({
   }
 
   return (
-    <div ref={shellRef} className="flex min-h-0 flex-1 flex-col lg:flex-row">
+    <div ref={shellRef} className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row lg:gap-2">
 
       {/* Editor. */}
       <div
@@ -227,7 +297,7 @@ export function ChatView({
           // refuses to shrink below its widest line of code and widens the
           // whole layout past the phone's viewport. The lg minimum is what
           // stops the divider squeezing the editor to nothing.
-          "min-h-0 min-w-0 border-border lg:block lg:flex-1 lg:border-r",
+          "min-h-0 min-w-0 overflow-hidden border-border bg-surface-raised lg:block lg:flex-1 lg:rounded-xl lg:border",
           pane === "code" ? "flex flex-1" : "hidden",
         )}
       >
@@ -249,7 +319,7 @@ export function ChatView({
           onPointerMove={onHandleMove}
           onPointerUp={endDrag}
           className={cn(
-            "hidden w-1.5 shrink-0 cursor-col-resize touch-none bg-border/40 transition-colors hover:bg-primary/40 lg:block",
+            "hidden w-1 shrink-0 cursor-col-resize touch-none rounded-full bg-transparent transition-colors hover:bg-primary/50 lg:block",
             dragging && "bg-primary/60",
           )}
         />
@@ -280,14 +350,51 @@ export function ChatView({
         // inert until the lg class below actually consumes it.
         style={{ "--chat-w": `${chatWidth}px` } as React.CSSProperties}
         className={cn(
-          "min-h-0 min-w-0 flex-col lg:w-[var(--chat-w)] lg:flex-none",
+          "min-h-0 min-w-0 flex-col overflow-hidden border-border bg-surface-raised lg:w-[var(--chat-w)] lg:flex-none lg:rounded-xl lg:border",
           chatCollapsed ? "lg:hidden" : "lg:flex",
           pane === "chat" ? "flex flex-1" : "hidden",
         )}
       >
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-8">
-          <h1 className="truncate text-sm font-medium">{conversationTitle}</h1>
-          <div className="flex shrink-0 items-center gap-2">
+        <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
+          <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight">{conversationTitle}</h1>
+          <div className="flex shrink-0 items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Model"
+                  className="h-7 min-w-0 gap-1 text-xs text-muted-foreground"
+                >
+                  <span className="truncate">{activeModel?.label ?? activeModelId}</span>
+                  <ChevronDown className="size-3 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {AGENT_MODELS.map((model) => (
+                  <DropdownMenuItem
+                    key={model.id}
+                    onClick={() => {
+                      setActiveModelId(model.id);
+                      void setConversationModel(conversationId, model.id);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "size-3.5",
+                        model.id === activeModelId ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="flex min-w-0 flex-col">
+                      <span>{model.label}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {model.description}
+                      </span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="icon"
@@ -302,116 +409,107 @@ export function ChatView({
           </div>
         </div>
 
-        <ScrollArea className="min-h-0 flex-1 px-4 py-6 sm:px-8">
-          <div className="flex flex-col gap-6">
+        <Conversation className="min-h-0 flex-1">
+          <ConversationContent className="gap-7 px-4 py-6">
             {messages.length === 0 && (
-              <p className="text-center text-sm text-muted-foreground">
-                Describe a strategy to get started.
-              </p>
+              <ConversationEmptyState
+                icon={<FileCode className="size-5" />}
+                title="Describe your strategy"
+                description="Say what you want in plain language. The agent writes the Pine v6, and you can edit it in the panel next door."
+              />
             )}
             {messages.map((message) => (
-              <div
-                key={message.id}
-                className={message.role === "user" ? "flex justify-end" : "flex justify-start"}
-              >
+              <Message from={message.role} key={message.id}>
+                {/* AI Elements supplies the message shell; the body stays
+                    ours, because it carries the Save-strategy and Copy
+                    actions on every code block — and it avoids pulling
+                    shiki and mermaid in for highlighting we already do. */}
                 {message.role === "user" ? (
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-lg rounded-tr-sm bg-muted px-4 py-3 text-sm">
-                    {messageText(message)}
-                  </div>
+                  <MessageBubble>{messageText(message)}</MessageBubble>
                 ) : (
                   <div className="min-w-0 max-w-full text-sm">
                     <MessageContent content={messageText(message)} onSaveCode={handleSaveCode} />
                   </div>
                 )}
-              </div>
+              </Message>
             ))}
-            {status === "submitted" && (
-              <div className="flex justify-start">
-                <div className="text-sm text-muted-foreground">Thinking…</div>
-              </div>
-            )}
             {error && (
               <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error.message || "Something went wrong. Please try again."}
               </div>
             )}
-          </div>
-        </ScrollArea>
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
 
-        <div className="shrink-0 border-t border-border px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 lg:pb-4">
-          <form onSubmit={handleSubmit} className="flex items-end gap-3">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submitDraft();
-                }
-              }}
-              rows={1}
-              placeholder="Describe a strategy, or paste a compiler error…"
-              className="max-h-40 min-h-11 flex-1 resize-none"
-            />
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="submit"
-                    size="icon"
-                    disabled={isBusy || !input.trim()}
-                    className="size-11 sm:size-8"
-                  />
-                }
-              >
-                <ArrowUp />
-                <span className="sr-only">Send message</span>
-              </TooltipTrigger>
-              <TooltipContent>Send (Enter)</TooltipContent>
-            </Tooltip>
-          </form>
+        <div className="shrink-0 border-t border-border px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:pb-3">
+          {isBusy && <AgentStatusLine status={agentStatus} />}
 
-          {/* Model picker sits with the input, not in front of it: there is
-              a sensible default, and changing it is a small adjustment you
-              make while writing rather than a decision before you start. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-1.5 -ml-1.5 h-11 gap-1 text-xs text-muted-foreground sm:h-8"
-                />
-              }
-            >
-              {activeModel?.label ?? activeModelId}
-              <ChevronDown className="size-3" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              {AGENT_MODELS.map((model) => (
-                <DropdownMenuItem
-                  key={model.id}
-                  onClick={() => {
-                    setActiveModelId(model.id);
-                    void setConversationModel(conversationId, model.id);
-                  }}
+          {/* Vercel's AI Elements prompt input: attachments, drag-and-drop,
+              auto-resize and submit states are its job, not ours. The
+              controls inside it are the ones that change what sending does. */}
+          <PromptInput
+            accept={ATTACHABLE}
+            multiple
+            maxFileSize={MAX_ATTACHMENT_BYTES}
+            onSubmit={handlePromptSubmit}
+            onError={(e) => toast.error(e.message)}
+          >
+            <PromptInputBody>
+              <PromptInputTextarea
+                placeholder={
+                  mode === "plan"
+                    ? "Describe the strategy — the agent plans it before writing anything…"
+                    : "Describe a strategy, or paste a compiler error…"
+                }
+              />
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools className="min-w-0 flex-1 overflow-hidden">
+                <PromptInputActionMenu>
+                  <PromptInputActionMenuTrigger aria-label="Add attachment" />
+                  <PromptInputActionMenuContent>
+                    <PromptInputActionAddAttachments label="Add a script, CSV or text file" />
+                  </PromptInputActionMenuContent>
+                </PromptInputActionMenu>
+
+                {/* Both options stay visible: Plan works the problem out
+                    first, Act writes the script. A single toggle would hide
+                    whichever one you are not currently in. */}
+                {(
+                  [
+                    { id: "act" as const, label: "Act", Icon: Pencil },
+                    { id: "plan" as const, label: "Plan", Icon: ListChecks },
+                  ]
+                ).map(({ id, label, Icon }) => (
+                  <PromptInputButton
+                    key={id}
+                    onClick={() => setMode(id)}
+                    aria-pressed={mode === id}
+                    aria-label={label}
+                    variant={mode === id ? "default" : "ghost"}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </PromptInputButton>
+                ))}
+
+                <PromptInputButton
+                  onClick={() => setThinking(!thinking)}
+                  aria-pressed={thinking}
+                  aria-label="Extended thinking"
+                  tooltip="Let the model reason for longer. Slower."
+                  variant={thinking ? "default" : "ghost"}
                 >
-                  <Check
-                    className={cn(
-                      "size-3.5",
-                      model.id === activeModelId ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <div className="flex min-w-0 flex-col">
-                    <span>{model.label}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {model.description}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  {/* Icon-only: the mode buttons and the model name need the
+                      room more, and the label lives in the tooltip. */}
+                  <Brain />
+                </PromptInputButton>
+
+              </PromptInputTools>
+              <PromptInputSubmit status={status} aria-label="Send message" className="shrink-0" />
+            </PromptInputFooter>
+          </PromptInput>
         </div>
       </div>
 

@@ -26,9 +26,9 @@ export default function Home() {
     <div className="flex min-h-screen flex-col bg-background">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
         <span className="text-sm font-semibold tracking-tight">PineDev</span>
-        <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/login" />}>
-          Log in
-        </Button>
+        <Button variant="ghost" size="sm" asChild>
+<Link href="/login">Log in</Link>
+</Button>
       </header>
 
       <main className="flex-1">
@@ -45,17 +45,13 @@ export default function Home() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Button nativeButton={false} render={<Link href="/login?mode=sign-up" />}>
-              Get Started
-            </Button>
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href="/pricing" />}
-            >
-              View Pricing
-              <ArrowRight />
-            </Button>
+            <Button asChild>
+<Link href="/login?mode=sign-up">Get Started</Link>
+</Button>
+            <Button variant="outline" asChild>
+<Link href="/pricing">View Pricing
+       <ArrowRight /></Link>
+</Button>
           </div>
 
           <div className="mt-8 w-full">

@@ -41,7 +41,7 @@ function setup(messages: UIMessage[] = [ASSISTANT_MESSAGE]) {
       conversationId="c1"
       conversationTitle="ORB breakout strategy"
       initialMessages={messages}
-      modelId="minimax-m3"
+      modelId="nemotron-ultra"
     />,
   );
 }
@@ -79,7 +79,7 @@ describe("ChatView workspace + editor panel", () => {
         conversationId="c1"
         conversationTitle="ORB breakout strategy"
         initialMessages={[ASSISTANT_MESSAGE]}
-        modelId="minimax-m3"
+        modelId="nemotron-ultra"
       />,
     );
 
@@ -89,15 +89,19 @@ describe("ChatView workspace + editor panel", () => {
     );
     await user.click(screen.getByRole("button", { name: /send message/i }));
 
-    expect(sendMessage).toHaveBeenCalledWith({ text: "Now make it short-only" });
+    // The composer's toggles are only real if they reach the server; this
+    // is where that is proven.
+    expect(sendMessage).toHaveBeenCalledWith(
+      { text: "Now make it short-only" },
+      { body: { mode: "act", thinking: false } },
+    );
   });
 
   it("shows an empty state when there is no code anywhere yet", () => {
     setup([]);
 
-    expect(
-      screen.getByText(/the pine script pinedev writes for you will appear here/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/no script yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/you can edit it directly once it lands/i)).toBeInTheDocument();
   });
 });
 
@@ -185,4 +189,77 @@ describe("ChatView chat panel", () => {
 
     expect(window.localStorage.getItem("pinedev:chat-collapsed")).toBe("true");
   });
+});
+
+/**
+ * Everything in the composer toolbar changes what sending the message
+ * does. These assert that, rather than that the buttons merely exist.
+ */
+describe("ChatView composer controls", () => {
+  function setupWithSpy() {
+    const sendMessage = vi.fn();
+    mockUseChat.mockReturnValue({
+      messages: [ASSISTANT_MESSAGE],
+      sendMessage,
+      status: "ready",
+      error: undefined,
+    });
+    render(
+      <ChatView
+        conversationId="c1"
+        conversationTitle="ORB breakout strategy"
+        initialMessages={[ASSISTANT_MESSAGE]}
+        modelId="nemotron-ultra"
+      />,
+    );
+    return sendMessage;
+  }
+
+  it("sends plan mode when Plan is selected", async () => {
+    const user = userEvent.setup({ delay: null });
+    const sendMessage = setupWithSpy();
+
+    await user.click(screen.getByRole("button", { name: "Plan" }));
+    await user.type(screen.getByPlaceholderText(/describe the strategy/i), "ORB on NQ");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "ORB on NQ" }),
+      { body: { mode: "plan", thinking: false } },
+    );
+  });
+
+  it("sends the thinking flag when Think is on", async () => {
+    const user = userEvent.setup({ delay: null });
+    const sendMessage = setupWithSpy();
+
+    await user.click(screen.getByRole("button", { name: /extended thinking/i }));
+    await user.type(screen.getByPlaceholderText(/describe a strategy/i), "ORB on NQ");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "ORB on NQ" }),
+      { body: { mode: "act", thinking: true } },
+    );
+  });
+
+  it("marks the active mode for assistive technology, not just visually", async () => {
+    const user = userEvent.setup({ delay: null });
+    setupWithSpy();
+
+    expect(screen.getByRole("button", { name: "Act" })).toHaveAttribute("aria-pressed", "true");
+    await user.click(screen.getByRole("button", { name: "Plan" }));
+    expect(screen.getByRole("button", { name: "Plan" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Act" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers attachments behind the composer's action menu", async () => {
+    const user = userEvent.setup({ delay: null });
+    setupWithSpy();
+
+    await user.click(screen.getByRole("button", { name: /add attachment/i }));
+    expect(
+      await screen.findByText(/add a script, csv or text file/i),
+    ).toBeInTheDocument();
+  }, 30000);
 });
