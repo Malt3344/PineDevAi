@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
-import { profiles } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { signOutAction } from "@/app/chat/actions";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +18,9 @@ export default async function ProfilePage() {
   }
 
   const [profile] = await db
-    .select({ createdAt: profiles.createdAt })
-    .from(profiles)
-    .where(eq(profiles.id, gate.user.id));
+    .select({ createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, gate.user.id));
 
   const memberSince = profile?.createdAt
     ? new Intl.DateTimeFormat("en-US", { dateStyle: "long" }).format(profile.createdAt)

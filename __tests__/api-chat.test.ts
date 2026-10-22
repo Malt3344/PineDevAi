@@ -23,7 +23,7 @@ vi.mock("@/lib/messages", () => ({
   insertMessage: vi.fn(),
 }));
 
-vi.mock("@/lib/conversations", () => ({
+vi.mock("@/lib/chats", () => ({
   setInitialTitleIfEmpty: vi.fn(),
 }));
 
@@ -37,11 +37,11 @@ import { db } from "@/lib/db/client";
 import { checkDailyCap } from "@/lib/daily-cap";
 import { checkMonthlyBudget } from "@/lib/cost-cap";
 import { insertMessage } from "@/lib/messages";
-import { setInitialTitleIfEmpty } from "@/lib/conversations";
+import { setInitialTitleIfEmpty } from "@/lib/chats";
 import { generateResponse } from "@/lib/agent/generate-response";
 import { AGENT_MODELS, DEFAULT_AGENT_MODEL_ID } from "@/lib/agent/models";
 
-function mockConversationLookup(rows: { id: string; model: string }[]) {
+function mockChatLookup(rows: { id: string; modelId: string }[]) {
   const where = vi.fn().mockResolvedValue(rows);
   const from = vi.fn(() => ({ where }));
   (db.select as unknown as ReturnType<typeof vi.fn>).mockReturnValue({ from });
@@ -74,9 +74,7 @@ describe("POST /api/chat", () => {
       status: "unauthenticated",
     });
 
-    const res = await POST(
-      makeRequest({ conversationId: "c1", messages: userMessages }),
-    );
+    const res = await POST(makeRequest({ chatId: "c1", messages: userMessages }));
 
     expect(res.status).toBe(401);
     expect(insertMessage).not.toHaveBeenCalled();
@@ -88,9 +86,7 @@ describe("POST /api/chat", () => {
       user: approvedUser,
     });
 
-    const res = await POST(
-      makeRequest({ conversationId: "c1", messages: userMessages }),
-    );
+    const res = await POST(makeRequest({ chatId: "c1", messages: userMessages }));
 
     expect(res.status).toBe(403);
     expect(insertMessage).not.toHaveBeenCalled();
@@ -101,15 +97,13 @@ describe("POST /api/chat", () => {
       status: "approved",
       user: approvedUser,
     });
-    mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
+    mockChatLookup([{ id: "c1", modelId: "claude-sonnet-4-6" }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: false,
       count: 20,
     });
 
-    const res = await POST(
-      makeRequest({ conversationId: "c1", messages: userMessages }),
-    );
+    const res = await POST(makeRequest({ chatId: "c1", messages: userMessages }));
     const data = await res.json();
 
     expect(res.status).toBe(429);
@@ -123,7 +117,7 @@ describe("POST /api/chat", () => {
       status: "approved",
       user: approvedUser,
     });
-    mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
+    mockChatLookup([{ id: "c1", modelId: "claude-sonnet-4-6" }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 1,
@@ -134,9 +128,7 @@ describe("POST /api/chat", () => {
       budgetMicroUsd: 8_000_000,
     });
 
-    const res = await POST(
-      makeRequest({ conversationId: "c1", messages: userMessages }),
-    );
+    const res = await POST(makeRequest({ chatId: "c1", messages: userMessages }));
     const data = await res.json();
 
     expect(res.status).toBe(429);
@@ -151,7 +143,7 @@ describe("POST /api/chat", () => {
       status: "approved",
       user: approvedUser,
     });
-    mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
+    mockChatLookup([{ id: "c1", modelId: "claude-sonnet-4-6" }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 0,
@@ -164,7 +156,7 @@ describe("POST /api/chat", () => {
 
     const res = await POST(
       makeRequest({
-        conversationId: "c1",
+        chatId: "c1",
         user_id: "attacker-supplied-id",
         messages: userMessages,
       }),
@@ -177,10 +169,10 @@ describe("POST /api/chat", () => {
     expect(insertMessage).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        conversationId: "c1",
+        chatId: "c1",
         userId: "real-user-id",
         role: "user",
-        content: "hello there",
+        parts: [{ type: "text", text: "hello there" }],
       }),
     );
     expect(setInitialTitleIfEmpty).toHaveBeenCalledWith(
@@ -191,8 +183,8 @@ describe("POST /api/chat", () => {
     expect(generateResponse).toHaveBeenCalledTimes(1);
     const call = (generateResponse as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
-    // The conversation was started on a model that has since been removed
-    // from the registry; it falls back rather than failing forever.
+    // The chat was started on a model that has since been removed from the
+    // registry; it falls back rather than failing forever.
     expect(call.modelId).toBe(DEFAULT_AGENT_MODEL_ID);
     expect(call.messages).toBeDefined();
     expect(typeof call.onFinish).toBe("function");
@@ -205,12 +197,12 @@ describe("POST /api/chat", () => {
     );
   });
 
-  it("saves the assistant message via onFinish with the correct conversation, user and role", async () => {
+  it("saves the assistant message via onFinish with the correct chat, user and role", async () => {
     (getApprovedUser as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: "approved",
       user: approvedUser,
     });
-    mockConversationLookup([{ id: "c1", model: "claude-sonnet-4-6" }]);
+    mockChatLookup([{ id: "c1", modelId: "claude-sonnet-4-6" }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 0,
@@ -221,7 +213,7 @@ describe("POST /api/chat", () => {
       budgetMicroUsd: 8_000_000,
     });
 
-    await POST(makeRequest({ conversationId: "c1", messages: userMessages }));
+    await POST(makeRequest({ chatId: "c1", messages: userMessages }));
 
     const call = (generateResponse as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
@@ -230,21 +222,21 @@ describe("POST /api/chat", () => {
     expect(insertMessage).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        conversationId: "c1",
+        chatId: "c1",
         userId: "real-user-id",
         role: "assistant",
-        content: "here is your corrected script",
+        parts: [{ type: "text", text: "here is your corrected script" }],
       }),
     );
   });
 
-  it("uses the conversation's own model when it is still a real one", async () => {
+  it("uses the chat's own model when it is still a real one", async () => {
     const real = AGENT_MODELS[AGENT_MODELS.length - 1].id;
     (getApprovedUser as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       status: "approved",
       user: approvedUser,
     });
-    mockConversationLookup([{ id: "c1", model: real }]);
+    mockChatLookup([{ id: "c1", modelId: real }]);
     (checkDailyCap as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       allowed: true,
       count: 0,
@@ -255,7 +247,7 @@ describe("POST /api/chat", () => {
       budgetMicroUsd: 8_000_000,
     });
 
-    await POST(makeRequest({ conversationId: "c1", messages: userMessages }));
+    await POST(makeRequest({ chatId: "c1", messages: userMessages }));
 
     const call = (generateResponse as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(call.modelId).toBe(real);

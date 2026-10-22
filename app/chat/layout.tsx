@@ -2,13 +2,14 @@ import { desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
-import { conversations } from "@/lib/db/schema";
+import { chats } from "@/lib/db/schema";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ConversationSidebar } from "@/components/ConversationSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { signOutAction } from "@/app/chat/actions";
-import { startCheckoutAction } from "@/app/chat/account/billing/actions";
 import { Button } from "@/components/ui/button";
+
+const SUPPORT_EMAIL = "hello@pinedev.app";
 
 export default async function ChatLayout({
   children,
@@ -24,18 +25,26 @@ export default async function ChatLayout({
     redirect("/login");
   }
 
+  // Signing up is instant for everyone — there is no manual approval queue.
+  // Reaching this branch means an admin has specifically suspended the
+  // account (see lib/db/schema.ts's isApproved column), so this reads as a
+  // suspension notice, not a "please wait" screen, and offers no way to pay
+  // past it — paying for the paid plan is unrelated to this flag.
   if (gate.status === "unapproved") {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
-        <h1 className="text-lg font-medium">You&apos;re on the waitlist</h1>
+        <h1 className="text-lg font-medium">This account is suspended</h1>
         <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-          Thanks for signing up. We&apos;re approving accounts manually while we
-          scale up &mdash; you&apos;ll get access soon.
+          If you think this is a mistake, email{" "}
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="text-foreground underline underline-offset-4"
+          >
+            {SUPPORT_EMAIL}
+          </a>{" "}
+          from the address on your account.
         </p>
-        <form action={startCheckoutAction} className="mt-6">
-          <Button type="submit">Skip the wait — upgrade to Pro</Button>
-        </form>
-        <form action={signOutAction} className="mt-3">
+        <form action={signOutAction} className="mt-6">
           <Button type="submit" variant="ghost">
             Log out
           </Button>
@@ -44,11 +53,16 @@ export default async function ChatLayout({
     );
   }
 
-  const userConversations = await db
-    .select({ id: conversations.id, title: conversations.title })
-    .from(conversations)
-    .where(eq(conversations.userId, gate.user.id))
-    .orderBy(desc(conversations.createdAt));
+  const userChats = await db
+    .select({
+      id: chats.id,
+      title: chats.title,
+      createdAt: chats.createdAt,
+      visibility: chats.visibility,
+    })
+    .from(chats)
+    .where(eq(chats.userId, gate.user.id))
+    .orderBy(desc(chats.createdAt));
 
   // shadcn's SidebarProvider owns the rail: collapse state (persisted in a
   // cookie so it survives a reload without a flash), the mobile sheet, and
@@ -60,8 +74,8 @@ export default async function ChatLayout({
   // an editor does.
   return (
     <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
-      <CommandPalette conversations={userConversations} />
-      <ConversationSidebar conversations={userConversations} userEmail={gate.user.email} />
+      <CommandPalette conversations={userChats} />
+      <ConversationSidebar conversations={userChats} userEmail={gate.user.email} />
       {/* min-h-0: a flex item defaults to min-height:auto and would refuse
           to shrink below its content, growing past the shell instead of
           letting the panes scroll inside themselves. */}

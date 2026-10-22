@@ -14,7 +14,7 @@ function mapStripeStatus(
 
 /**
  * Receives Stripe subscription lifecycle events. This is the ONLY place
- * profiles.subscriptionStatus is ever written — never trust a client
+ * users.subscriptionStatus is ever written — never trust a client
  * request to change it directly. The signature check below is what makes
  * that safe: only a request signed with our Stripe webhook secret reaches
  * the update below.

@@ -1,0 +1,60 @@
+//@version=6
+// PineDev protocol scaffold. Replace the SIGNALS section with the study's
+// locked entry rules; keep everything else.
+strategy("PineDev strategy", overlay = true,
+     initial_capital = 10000,
+     default_qty_type = strategy.percent_of_equity, default_qty_value = 10,
+     commission_type = strategy.commission.percent, commission_value = 0.02,
+     slippage = 1)
+
+// ── Protocol window ─────────────────────────────────────────────────────
+// Set to the in-sample dates for development. For the one-shot
+// out-of-sample test, change ONLY these two dates.
+windowStart = input.time(timestamp("01 Jan 2018 00:00 +0000"), "Window start", group = "Protocol window")
+windowEnd   = input.time(timestamp("31 Dec 2022 23:59 +0000"), "Window end", group = "Protocol window")
+inWindow    = time >= windowStart and time <= windowEnd
+
+// ── Inputs — keep them few; every one is a way to overfit ──────────────
+fastLen = input.int(20, "Fast EMA", minval = 1, group = "Signal")
+slowLen = input.int(50, "Slow EMA", minval = 2, group = "Signal")
+atrLen  = input.int(14, "ATR length", minval = 1, group = "Risk")
+stopAtr = input.float(2.0, "Stop (× ATR)", minval = 0.1, step = 0.1, group = "Risk")
+rr      = input.float(2.0, "Reward : risk", minval = 0.1, step = 0.1, group = "Risk")
+
+// ── SIGNALS ─────────────────────────────────────────────────────────────
+// Confirmed-bar values only. Never request.security(..., lookahead = barmerge.lookahead_on).
+fast = ta.ema(close, fastLen)
+slow = ta.ema(close, slowLen)
+atr  = ta.atr(atrLen)
+
+longSignal  = ta.crossover(fast, slow)
+shortSignal = ta.crossunder(fast, slow)
+
+// ── Orders ──────────────────────────────────────────────────────────────
+// Risk per unit is fixed at entry, so the stop does not drift with ATR.
+var float riskPerUnit = na
+
+if inWindow and strategy.position_size == 0
+    if longSignal
+        riskPerUnit := stopAtr * atr
+        strategy.entry("Long", strategy.long)
+    else if shortSignal
+        riskPerUnit := stopAtr * atr
+        strategy.entry("Short", strategy.short)
+
+if strategy.position_size > 0 and not na(riskPerUnit)
+    strategy.exit("Long exit", "Long",
+         stop = strategy.position_avg_price - riskPerUnit,
+         limit = strategy.position_avg_price + rr * riskPerUnit)
+
+if strategy.position_size < 0 and not na(riskPerUnit)
+    strategy.exit("Short exit", "Short",
+         stop = strategy.position_avg_price + riskPerUnit,
+         limit = strategy.position_avg_price - rr * riskPerUnit)
+
+// Nothing is carried past the window: the next test starts flat.
+if time > windowEnd and strategy.position_size != 0
+    strategy.close_all(comment = "Window end")
+
+plot(fast, "Fast EMA", color.new(color.teal, 0))
+plot(slow, "Slow EMA", color.new(color.gray, 0))

@@ -13,9 +13,39 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 // Server actions cannot run in jsdom; the picker's job here is to report
 // the choice, and this is what it reports to.
-vi.mock("@/app/chat/actions", () => ({ setConversationModel: vi.fn() }));
+vi.mock("@/app/chat/actions", () => ({ setChatModel: vi.fn() }));
+
+// The protocol stages call server actions that reach the database; these
+// tests are about the workspace around them.
+const { mockUploadRun } = vi.hoisted(() => ({ mockUploadRun: vi.fn() }));
+vi.mock("@/app/chat/study-actions", () => ({
+  saveHypothesis: vi.fn(),
+  lockHypothesis: vi.fn(),
+  amendHypothesis: vi.fn(),
+  uploadRun: mockUploadRun,
+  deleteRun: vi.fn(),
+}));
+
+// Votes are fetched over the network in the real component; these tests
+// are not about that fetch, so it is stubbed out rather than left to hit
+// jsdom's (nonexistent) network.
+vi.mock("swr", () => ({
+  default: () => ({ data: undefined, mutate: vi.fn() }),
+}));
 
 import { ChatView } from "@/components/ChatView";
+import { analyzeStudy, type ProtocolInput } from "@/lib/quant/analysis";
+import { DEFAULT_CRITERIA, DEFAULT_HYPOTHESIS } from "@/lib/quant/protocol";
+
+const PROTOCOL: ProtocolInput = {
+  hypothesis: DEFAULT_HYPOTHESIS,
+  criteria: DEFAULT_CRITERIA,
+  lockedAt: null,
+  amendments: 0,
+  inSampleAttempts: 0,
+  oosAttempts: 0,
+};
+const STUDY = { protocol: PROTOCOL, analysis: analyzeStudy(PROTOCOL, [], false) };
 
 const ASSISTANT_MESSAGE: UIMessage = {
   id: "m1",
@@ -38,10 +68,11 @@ function setup(messages: UIMessage[] = [ASSISTANT_MESSAGE]) {
 
   return render(
     <ChatView
-      conversationId="c1"
-      conversationTitle="ORB breakout strategy"
+      chatId="c1"
+      chatTitle="ORB breakout strategy"
       initialMessages={messages}
       modelId="nemotron-ultra"
+      study={STUDY}
     />,
   );
 }
@@ -76,10 +107,11 @@ describe("ChatView workspace + editor panel", () => {
     });
     render(
       <ChatView
-        conversationId="c1"
-        conversationTitle="ORB breakout strategy"
+        chatId="c1"
+        chatTitle="ORB breakout strategy"
         initialMessages={[ASSISTANT_MESSAGE]}
         modelId="nemotron-ultra"
+        study={STUDY}
       />,
     );
 
@@ -112,22 +144,22 @@ describe("ChatView workspace + editor panel", () => {
  * open the workspace on a phone and find no workspace in it.
  */
 describe("ChatView pane switcher", () => {
-  it("offers the code and the chat as destinations", () => {
+  it("offers the protocol, the script and the chat as destinations", () => {
     setup();
 
     const nav = screen.getByRole("navigation", { name: /workspace panes/i });
-    for (const label of ["Code", "Chat"]) {
+    for (const label of ["Protocol", "Script", "Chat"]) {
       expect(within(nav).getByRole("button", { name: label })).toBeInTheDocument();
     }
     // There is no file list any more — one workspace is one strategy.
     expect(within(nav).queryByRole("button", { name: "Files" })).not.toBeInTheDocument();
   });
 
-  it("starts on the chat, which is what the page is for", () => {
+  it("starts on the protocol, which is what a study is for", () => {
     setup();
 
     const nav = screen.getByRole("navigation", { name: /workspace panes/i });
-    expect(within(nav).getByRole("button", { name: "Chat" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Protocol" })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -138,17 +170,43 @@ describe("ChatView pane switcher", () => {
     setup();
 
     const nav = screen.getByRole("navigation", { name: /workspace panes/i });
-    await user.click(within(nav).getByRole("button", { name: "Code" }));
+    await user.click(within(nav).getByRole("button", { name: "Script" }));
 
-    expect(within(nav).getByRole("button", { name: "Code" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Script" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(within(nav).getByRole("button", { name: "Chat" })).not.toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Protocol" })).not.toHaveAttribute(
       "aria-current",
     );
   });
+});
 
+describe("ChatView protocol", () => {
+  it("opens on the stage the study is actually at, with every stage reachable", () => {
+    setup();
+
+    const stages = screen.getByRole("navigation", { name: /protocol stages/i });
+    expect(within(stages).getByRole("button", { name: /hypothesis/i })).toHaveAttribute("aria-current", "step");
+    expect(within(stages).getAllByRole("button")).toHaveLength(7);
+    expect(screen.getByRole("button", { name: /lock & pre-register/i })).toBeDisabled();
+  });
+
+  it("sends the assistant a visible message when a stage asks for help", async () => {
+    const user = userEvent.setup({ delay: null });
+    const sendMessage = vi.fn();
+    mockUseChat.mockReturnValue({ messages: [], sendMessage, status: "ready", error: undefined });
+    render(
+      <ChatView chatId="c1" chatTitle="Study" initialMessages={[]} modelId="nemotron-ultra" study={STUDY} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /draft with the assistant/i }));
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      { text: expect.stringMatching(/testable hypothesis/) },
+      { body: { mode: "plan", thinking: false } },
+    );
+  });
 });
 
 /**
@@ -206,10 +264,11 @@ describe("ChatView composer controls", () => {
     });
     render(
       <ChatView
-        conversationId="c1"
-        conversationTitle="ORB breakout strategy"
+        chatId="c1"
+        chatTitle="ORB breakout strategy"
         initialMessages={[ASSISTANT_MESSAGE]}
         modelId="nemotron-ultra"
+        study={STUDY}
       />,
     );
     return sendMessage;
@@ -220,7 +279,7 @@ describe("ChatView composer controls", () => {
     const sendMessage = setupWithSpy();
 
     await user.click(screen.getByRole("button", { name: "Plan" }));
-    await user.type(screen.getByPlaceholderText(/describe the strategy/i), "ORB on NQ");
+    await user.type(screen.getByPlaceholderText(/describe the idea/i), "ORB on NQ");
     await user.click(screen.getByRole("button", { name: /send message/i }));
 
     expect(sendMessage).toHaveBeenCalledWith(

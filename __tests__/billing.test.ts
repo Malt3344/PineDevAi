@@ -9,7 +9,7 @@ function makeDb() {
 }
 
 describe("syncSubscriptionStatus", () => {
-  it("grants isApproved when a subscription becomes active — paying skips the waitlist", async () => {
+  it("sets subscriptionStatus to active without touching isApproved", async () => {
     const { db, set } = makeDb();
 
     await syncSubscriptionStatus(db, "cus_1", "active", "sub_1");
@@ -17,7 +17,6 @@ describe("syncSubscriptionStatus", () => {
     expect(set).toHaveBeenCalledWith({
       subscriptionStatus: "active",
       stripeSubscriptionId: "sub_1",
-      isApproved: true,
     });
   });
 

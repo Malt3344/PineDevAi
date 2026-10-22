@@ -2,8 +2,10 @@
 
 import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/browser";
+import { registerAction } from "./actions";
+import { safeNextPath } from "@/lib/safe-redirect";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
@@ -12,11 +14,11 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
-type Status = "idle" | "loading" | "sent" | "error";
+const SUPPORT_EMAIL = "hello@pinedev.app";
+
+type Status = "idle" | "loading" | "error";
 type Mode = "sign-in" | "sign-up" | "forgot-password";
 
 function GoogleIcon() {
@@ -52,24 +54,26 @@ function Wordmark() {
 }
 
 /**
- * Sign in, create an account, or reset a forgotten password — Google, or
- * email and password. No magic link. Every branch below keeps a way back
- * to the landing page (the wordmark) or to sign-in (the "Back" link).
+ * Sign in, create an account, or get help with a forgotten password —
+ * Google, or email and password. There's no self-service password reset:
+ * that would need an outbound email provider this app doesn't run, so a
+ * forgotten password is a support request instead (see the static panel
+ * below). Every branch keeps a way back to the landing page (the wordmark)
+ * or to sign-in (the "Back" link).
  *
  * Defaults to sign-in — most visits here are a returning user, not a new
  * one. A link that specifically means "create an account" (the landing
  * page's "Get Started") passes ?mode=sign-up to start there instead.
- * Without this, a returning user typing their password on the default
- * view would silently trigger signUp() instead of signing in, which
- * re-sends a confirmation email every time rather than logging them in.
  */
 function LoginForm() {
   const searchParams = useSearchParams();
   const initialMode: Mode = searchParams.get("mode") === "sign-up" ? "sign-up" : "sign-in";
+  // Where to land after signing in — the Claude connect screen sends people
+  // here and expects them back. Never anywhere off-site.
+  const next = safeNextPath(searchParams.get("callbackUrl"));
 
   const [status, setStatus] = useState<Status>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [sentEmail, setSentEmail] = useState("");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,34 +82,8 @@ function LoginForm() {
   async function handleGoogle() {
     setStatus("loading");
     setErrorMessage("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) {
-      setStatus("error");
-      setErrorMessage(error.message);
-    }
-    // On success the browser navigates away to Google, so no "loading" reset needed.
-  }
-
-  async function handleForgotPassword(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("loading");
-
-    const supabase = createClient();
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-    });
-
-    // Always show the same success state, whether or not an account exists
-    // for this email. Surfacing "no account with that email" here would let
-    // an attacker enumerate registered addresses one guess at a time —
-    // Supabase's own response can't be trusted to hide this by itself, so
-    // the UI has to.
-    setSentEmail(email);
-    setStatus("sent");
+    await signIn("google", { callbackUrl: next });
+    // On success the browser navigates to Google, so no "loading" reset needed.
   }
 
   async function handlePassword(event: FormEvent<HTMLFormElement>) {
@@ -113,60 +91,22 @@ function LoginForm() {
     setStatus("loading");
     setErrorMessage("");
 
-    const supabase = createClient();
-
     if (mode === "sign-up") {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      });
-      if (error) {
+      const result = await registerAction(email, password);
+      if (!result.ok) {
         setStatus("error");
-        setErrorMessage(error.message);
+        setErrorMessage(result.error);
         return;
       }
-      setSentEmail(email);
-      setStatus("sent");
-      return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
+    const result = await signIn("credentials", { email, password, redirect: false });
+    if (result?.error) {
       setStatus("error");
-      setErrorMessage(error.message);
+      setErrorMessage("That email and password don't match an account.");
       return;
     }
-    window.location.href = "/chat";
-  }
-
-  if (status === "sent") {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
-        <div className="w-full max-w-sm">
-          <Wordmark />
-          <Card>
-            <CardContent className="text-center">
-              <p className="text-sm font-medium text-foreground">Check your email</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We sent a link to <span className="text-foreground">{sentEmail}</span>.
-                Click it to continue.
-              </p>
-            </CardContent>
-          </Card>
-          <button
-            type="button"
-            onClick={() => {
-              setStatus("idle");
-              setMode("sign-in");
-            }}
-            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
-          >
-            Back to sign in
-          </button>
-        </div>
-      </main>
-    );
+    window.location.href = next;
   }
 
   if (mode === "forgot-password") {
@@ -174,35 +114,30 @@ function LoginForm() {
       <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6">
         <div className="w-full max-w-sm">
           <Wordmark />
-          <h1 className="text-center text-lg font-medium">Reset your password</h1>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            Enter your email and we&apos;ll send you a link to set a new one.
-          </p>
-          <form onSubmit={handleForgotPassword} className="mt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="forgot-email">Email address</Label>
-              <Input
-                id="forgot-email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
-                className="h-11"
-              />
-            </div>
-            <Button type="submit" disabled={status === "loading"} className="w-full h-11">
-              {status === "loading" ? "Sending…" : "Send reset link"}
-            </Button>
-            <button
-              type="button"
-              onClick={() => setMode("sign-in")}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              Back to sign in
-            </button>
-          </form>
+          <Card>
+            <CardContent className="text-center">
+              <p className="text-sm font-medium text-foreground">Forgot your password?</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Password resets aren&apos;t self-service yet. Email{" "}
+                <a
+                  href={`mailto:${SUPPORT_EMAIL}`}
+                  className="text-foreground underline underline-offset-4"
+                >
+                  {SUPPORT_EMAIL}
+                </a>{" "}
+                from the address on your account and we&apos;ll reset it for you. If you
+                signed up with Google, use the Google button below instead — there&apos;s
+                no password to reset.
+              </p>
+            </CardContent>
+          </Card>
+          <button
+            type="button"
+            onClick={() => setMode("sign-in")}
+            className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Back to sign in
+          </button>
         </div>
       </main>
     );

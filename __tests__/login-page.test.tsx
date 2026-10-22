@@ -9,15 +9,12 @@ vi.mock("next/navigation", () => ({
   useSearchParams: mockUseSearchParams,
 }));
 
-vi.mock("@/lib/supabase/browser", () => ({
-  createClient: vi.fn(() => ({
-    auth: {
-      signInWithOAuth: vi.fn(),
-      signInWithPassword: vi.fn(),
-      signUp: vi.fn(),
-      resetPasswordForEmail: vi.fn(),
-    },
-  })),
+vi.mock("next-auth/react", () => ({
+  signIn: vi.fn(),
+}));
+
+vi.mock("@/app/login/actions", () => ({
+  registerAction: vi.fn(),
 }));
 
 import LoginPage from "@/app/login/page";

@@ -6,11 +6,13 @@ import { checkDailyCap } from "@/lib/daily-cap";
 import { checkMonthlyBudget, recordUsage } from "@/lib/cost-cap";
 import { isMessageTooLong, MAX_MESSAGE_LENGTH } from "@/lib/message-limits";
 import { insertMessage } from "@/lib/messages";
-import { setInitialTitleIfEmpty } from "@/lib/conversations";
+import { setInitialTitleIfEmpty } from "@/lib/chats";
 import { generateResponse } from "@/lib/agent/generate-response";
 import { resolveAgentModelId } from "@/lib/agent/models";
 import { db } from "@/lib/db/client";
-import { conversations } from "@/lib/db/schema";
+import { loadStudy } from "@/lib/studies";
+import { studyContext } from "@/lib/quant/context";
+import { chats } from "@/lib/db/schema";
 
 // A turn is two model calls — the draft, then the review pass — and the
 // free models measure 30-40s each, so 60s was not enough and every reply
@@ -38,7 +40,7 @@ function extractLastUserText(messages: UIMessage[]): string | null {
  */
 export async function POST(req: Request) {
   // 1. Authenticate + 2. check approval. The client can never assert its
-  // own identity — it always comes from the server-side Supabase session.
+  // own identity — it always comes from the server-side Auth.js session.
   const gateResult = await getApprovedUser();
 
   if (gateResult.status === "unauthenticated") {
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
 
   if (gateResult.status === "unapproved") {
     return NextResponse.json(
-      { error: "Your account is not approved yet. You are on the waitlist." },
+      { error: "This account is suspended. Contact support if you think this is a mistake." },
       { status: 403 },
     );
   }
@@ -56,7 +58,7 @@ export async function POST(req: Request) {
 
   let body: {
     messages?: UIMessage[];
-    conversationId?: string;
+    chatId?: string;
     mode?: unknown;
     thinking?: unknown;
   };
@@ -66,13 +68,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { messages, conversationId } = body;
+  const { messages, chatId } = body;
   // Both come from the client, so both are narrowed rather than trusted.
   const mode = body.mode === "plan" ? "plan" : "act";
   const thinking = body.thinking === true;
 
-  if (!conversationId || typeof conversationId !== "string") {
-    return NextResponse.json({ error: "Missing conversationId." }, { status: 400 });
+  if (!chatId || typeof chatId !== "string") {
+    return NextResponse.json({ error: "Missing chatId." }, { status: 400 });
   }
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -91,16 +93,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // The conversation must belong to this user, and its stored model is the
-  // source of truth for which model generates the reply — never a
-  // client-supplied value.
-  const [conversation] = await db
-    .select({ id: conversations.id, model: conversations.model })
-    .from(conversations)
-    .where(and(eq(conversations.id, conversationId), eq(conversations.userId, user.id)));
+  // The chat must belong to this user, and its stored model is the source
+  // of truth for which model generates the reply — never a client-supplied
+  // value.
+  const [chat] = await db
+    .select({ id: chats.id, modelId: chats.modelId })
+    .from(chats)
+    .where(and(eq(chats.id, chatId), eq(chats.userId, user.id)));
 
-  if (!conversation) {
-    return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
+  if (!chat) {
+    return NextResponse.json({ error: "Chat not found." }, { status: 404 });
   }
 
   // 3. Two independent limits, both checked before persisting or calling
@@ -128,16 +130,16 @@ export async function POST(req: Request) {
     );
   }
 
-  // Title the conversation from the first message, before it stops being
-  // the first message. No LLM call involved.
-  await setInitialTitleIfEmpty(db, conversationId, userText);
+  // Title the chat from the first message, before it stops being the first
+  // message. No LLM call involved.
+  await setInitialTitleIfEmpty(db, chatId, userText);
 
   // 4. Persist the user's message before calling the model.
   await insertMessage(db, {
-    conversationId,
+    chatId,
     userId: user.id,
     role: "user",
-    content: userText,
+    parts: [{ type: "text", text: userText }],
   });
 
   // 5. Generate and self-review the assistant's reply, persisting it
@@ -147,21 +149,33 @@ export async function POST(req: Request) {
   // Every model in the chain can still fail together — an unfunded or
   // misconfigured provider fails identically for all of them. That must
   // reach the user as a diagnosable message, not an unhandled 500.
+  // The assistant argues from the study's real hypothesis and numbers.
+  // Best-effort: a failure here should cost the context, not the reply.
+  let context: string | undefined;
+  try {
+    const study = await loadStudy(db, chatId, user.id);
+    context = studyContext(study.protocol, study.analysis);
+  } catch (error) {
+    console.warn("Could not load study context", error);
+  }
+
   try {
     return await generateResponse({
-      // Re-validated, not trusted: a conversation started on a model that
-      // has since been removed from the registry would otherwise fail every
-      // request forever. Unknown ids fall back to the current default.
-      modelId: resolveAgentModelId(conversation.model),
+      context,
+      // Re-validated, not trusted: a chat started on a model that has since
+      // been removed from the registry would otherwise fail every request
+      // forever. Unknown ids fall back to the current default.
+      modelId: resolveAgentModelId(chat.modelId),
       mode,
       thinking,
       messages: convertToModelMessages(messages),
-      onFinish: async ({ text }) => {
+      onFinish: async ({ text, id }) => {
         await insertMessage(db, {
-          conversationId,
+          id,
+          chatId,
           userId: user.id,
           role: "assistant",
-          content: text,
+          parts: [{ type: "text", text }],
         });
       },
       // Fires once per model call that actually happened — including the

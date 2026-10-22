@@ -1,9 +1,12 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth/auth.config";
 
-export async function middleware(request: NextRequest) {
-  return updateSession(request);
-}
+// The edge-safe config only (no DB adapter) — see auth.config.ts for why.
+// Its `authorized` callback is what actually runs on every request; this is
+// a UX convenience only, redirecting a signed-out visitor away from /chat.
+// Every real page/route/action re-validates via lib/gate.ts's
+// getApprovedUser(), which is never bypassed by this middleware.
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: [

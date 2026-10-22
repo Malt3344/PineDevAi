@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pinedev": {
+      "type": "http",
+      "url": "https://www.pine-dev.com/api/mcp"
+    }
+  }
+}

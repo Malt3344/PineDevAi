@@ -1,0 +1,12 @@
+{
+  "name": "pinedev",
+  "displayName": "PineDev",
+  "version": "1.0.0",
+  "description": "Write robust TradingView Pine Script v6 strategies and validate them through PineDev's protocol: pre-registered hypothesis, deflated Sharpe, Monte Carlo, cost stress and a one-shot out-of-sample test.",
+  "author": {
+    "name": "PineDev",
+    "email": "hello@pinedev.app"
+  },
+  "homepage": "https://www.pine-dev.com",
+  "keywords": ["tradingview", "pine-script", "trading", "backtesting", "quant"]
+}

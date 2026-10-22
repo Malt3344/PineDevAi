@@ -63,7 +63,7 @@ export function StrategyList({ strategies }: { strategies: Strategy[] }) {
         description="Every script the agent writes has a Save button. Saved ones land here, so you can find them again without scrolling back through a conversation."
         action={
           <Button asChild>
-<Link href="/chat">Start a strategy</Link>
+<Link href="/chat">Go to the research desk</Link>
 </Button>
         }
       />

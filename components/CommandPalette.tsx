@@ -1,12 +1,53 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CreditCard, FileCode, MessageSquare, NotebookText, Plus, Search, User } from "lucide-react";
-import { createConversation } from "@/app/chat/actions";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import {
+  CreditCard,
+  FileCode,
+  MessageSquare,
+  NotebookText,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  User,
+} from "lucide-react";
+import { toast } from "sonner";
+import { createChat, deleteChat, renameChat } from "@/app/chat/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 type Conversation = { id: string; title: string };
+
+/** Matches `/chat/[id]`, excluding the two static routes under /chat that
+ * are not chats: /chat/strategies and /chat/account (and its subpages). */
+function currentChatIdFrom(pathname: string): string | null {
+  const match = /^\/chat\/([^/]+)$/.exec(pathname);
+  if (!match) return null;
+  const id = match[1];
+  if (id === "strategies" || id === "account" || id === "connect") return null;
+  return id;
+}
 
 type Command = {
   id: string;
@@ -26,9 +67,52 @@ type Command = {
  */
 export function CommandPalette({ conversations }: { conversations: Conversation[] }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+
+  const currentChatId = currentChatIdFrom(pathname);
+  const currentChat = useMemo(
+    () =>
+      currentChatId
+        ? (conversations.find((c) => c.id === currentChatId) ?? { id: currentChatId, title: "" })
+        : null,
+    [currentChatId, conversations],
+  );
+
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renamePending, setRenamePending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+
+  async function submitRename(event: FormEvent) {
+    event.preventDefault();
+    if (!currentChat) return;
+    setRenamePending(true);
+    try {
+      await renameChat(currentChat.id, renameValue);
+      setRenameOpen(false);
+    } catch {
+      toast.error("Could not rename that study.");
+    } finally {
+      setRenamePending(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!currentChat) return;
+    setDeletePending(true);
+    try {
+      await deleteChat(currentChat.id);
+      setDeleteOpen(false);
+    } catch {
+      toast.error("Could not delete that study.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -58,27 +142,52 @@ export function CommandPalette({ conversations }: { conversations: Conversation[
     return [
       {
         id: "new",
-        label: "New strategy",
-        hint: "Start a fresh conversation",
+        label: "New study",
+        hint: "Start validating a new idea",
         icon: Plus,
         run: () => {
           setOpen(false);
-          void createConversation();
+          void createChat();
         },
       },
-      { id: "saved", label: "Saved strategies", icon: NotebookText, run: go("/chat/strategies") },
+      { id: "desk", label: "Research desk", icon: NotebookText, run: go("/chat") },
+      { id: "connect", label: "Connect Claude", icon: User, run: go("/chat/connect") },
+      { id: "saved", label: "Script library", icon: FileCode, run: go("/chat/strategies") },
       { id: "usage", label: "Usage", icon: FileCode, run: go("/chat/account/usage") },
       { id: "billing", label: "Billing", icon: CreditCard, run: go("/chat/account/billing") },
       { id: "account", label: "Account settings", icon: User, run: go("/chat/account") },
+      ...(currentChat
+        ? [
+            {
+              id: "rename-current",
+              label: "Rename this study",
+              icon: Pencil,
+              run: () => {
+                setOpen(false);
+                setRenameValue(currentChat.title);
+                setRenameOpen(true);
+              },
+            },
+            {
+              id: "delete-current",
+              label: "Delete this study",
+              icon: Trash2,
+              run: () => {
+                setOpen(false);
+                setDeleteOpen(true);
+              },
+            },
+          ]
+        : []),
       ...conversations.map((c) => ({
         id: c.id,
-        label: c.title || "New strategy",
-        hint: "Open strategy",
+        label: c.title || "New study",
+        hint: "Open study",
         icon: MessageSquare,
         run: go(`/chat/${c.id}`),
       })),
     ];
-  }, [conversations, router]);
+  }, [conversations, router, currentChat]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -86,21 +195,21 @@ export function CommandPalette({ conversations }: { conversations: Conversation[
     return commands.filter((c) => c.label.toLowerCase().includes(q)).slice(0, 8);
   }, [commands, query]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[12vh]"
-      onClick={() => setOpen(false)}
-      role="presentation"
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-popover shadow-2xl"
-      >
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 px-4 pt-[12vh]"
+          onClick={() => setOpen(false)}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Command palette"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-popover shadow-2xl"
+          >
         <div className="flex items-center gap-2 border-b border-border px-3">
           <Search className="size-4 shrink-0 text-muted-foreground" />
           <input
@@ -122,7 +231,7 @@ export function CommandPalette({ conversations }: { conversations: Conversation[
                 results[active]?.run();
               }
             }}
-            placeholder="Search strategies and actions…"
+            placeholder="Search studies and actions…"
             aria-label="Search strategies and actions"
             className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
@@ -165,5 +274,59 @@ export function CommandPalette({ conversations }: { conversations: Conversation[
         )}
       </div>
     </div>
+      )}
+
+      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <DialogContent>
+          <form onSubmit={submitRename}>
+            <DialogHeader>
+              <DialogTitle>Rename chat</DialogTitle>
+              <DialogDescription>Give this chat a name you&apos;ll recognize later.</DialogDescription>
+            </DialogHeader>
+            <Input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              maxLength={200}
+              className="mt-4"
+              aria-label="Chat title"
+            />
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={renamePending || !renameValue.trim()}>
+                {renamePending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{currentChat?.title || "New strategy"}&rdquo; and everything in it will be
+              removed. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletePending}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {deletePending ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

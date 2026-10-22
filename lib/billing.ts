@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { db as Db } from "@/lib/db/client";
-import { profiles } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 import { getStripeClient, PAID_PLAN_PRICE_ID } from "@/lib/stripe";
 
 /**
@@ -13,13 +13,13 @@ export async function getOrCreateStripeCustomerId(
   userId: string,
   email: string,
 ): Promise<string> {
-  const [profile] = await db
-    .select({ stripeCustomerId: profiles.stripeCustomerId })
-    .from(profiles)
-    .where(eq(profiles.id, userId));
+  const [user] = await db
+    .select({ stripeCustomerId: users.stripeCustomerId })
+    .from(users)
+    .where(eq(users.id, userId));
 
-  if (profile?.stripeCustomerId) {
-    return profile.stripeCustomerId;
+  if (user?.stripeCustomerId) {
+    return user.stripeCustomerId;
   }
 
   const customer = await getStripeClient().customers.create({
@@ -28,9 +28,9 @@ export async function getOrCreateStripeCustomerId(
   });
 
   await db
-    .update(profiles)
+    .update(users)
     .set({ stripeCustomerId: customer.id })
-    .where(eq(profiles.id, userId));
+    .where(eq(users.id, userId));
 
   return customer.id;
 }
@@ -78,15 +78,14 @@ export async function createPortalSession(
 }
 
 /**
- * Applies a Stripe subscription object's status to the matching profile
+ * Applies a Stripe subscription object's status to the matching user
  * row, found by Stripe customer id. Called only from the webhook handler,
  * after the event's signature has been verified — this is the one place
  * subscriptionStatus is ever written.
  *
- * A newly active subscription also grants isApproved — paying for Pro is
- * itself a way past the manual-approval waitlist, not just a plan upgrade
- * for someone already let in. Losing or canceling the subscription later
- * does not revoke approval; it only drops the message cap back to free.
+ * Does not touch isApproved — that flag is an unrelated admin kill-switch
+ * (see lib/db/schema.ts), not something subscribing or unsubscribing should
+ * ever flip in either direction.
  */
 export async function syncSubscriptionStatus(
   db: typeof Db,
@@ -95,11 +94,7 @@ export async function syncSubscriptionStatus(
   stripeSubscriptionId: string | null,
 ): Promise<void> {
   await db
-    .update(profiles)
-    .set({
-      subscriptionStatus: status,
-      stripeSubscriptionId,
-      ...(status === "active" ? { isApproved: true } : {}),
-    })
-    .where(eq(profiles.stripeCustomerId, stripeCustomerId));
+    .update(users)
+    .set({ subscriptionStatus: status, stripeSubscriptionId })
+    .where(eq(users.stripeCustomerId, stripeCustomerId));
 }

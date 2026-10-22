@@ -1,0 +1,226 @@
+- generic [active] [ref=f9e1]:
+  - generic [ref=f9e2]:
+    - banner [ref=f9e3]:
+      - generic [ref=f9e4]:
+        - generic [ref=f9e5]: PineDev
+        - navigation [ref=f9e6]:
+          - link "Product" [ref=f9e7] [cursor=pointer]:
+            - /url: "#features"
+          - link "Pricing" [ref=f9e8] [cursor=pointer]:
+            - /url: "#pricing"
+          - link "FAQ" [ref=f9e9] [cursor=pointer]:
+            - /url: "#faq"
+        - generic [ref=f9e10]:
+          - link "Log in" [ref=f9e11] [cursor=pointer]:
+            - /url: /login
+          - link "Get started" [ref=f9e12] [cursor=pointer]:
+            - /url: /login?mode=sign-up
+    - main [ref=f9e13]:
+      - generic [ref=f9e14]:
+        - generic [ref=f9e15]: Built specifically for Pine Script v6
+        - heading "Describe your strategy. Get working Pine Script v6." [level=1] [ref=f9e16]: Describe your strategy.Get working Pine Script v6.
+        - paragraph [ref=f9e17]: PineDev is an AI agent that writes and fixes TradingView Pine Script for you. Paste a compiler error and it ships a corrected script back — no forums, no guesswork.
+        - generic [ref=f9e18]:
+          - link "Get Started" [ref=f9e19] [cursor=pointer]:
+            - /url: /login?mode=sign-up
+          - link "View Pricing" [ref=f9e20] [cursor=pointer]:
+            - /url: "#pricing"
+        - generic [ref=f9e22]:
+          - generic [ref=f9e23]:
+            - paragraph [ref=f9e24]: Workspace
+            - generic [ref=f9e25]:
+              - generic [ref=f9e26]: this conversation.pine
+              - generic [ref=f9e33]: vwap_reversion.pine
+              - generic [ref=f9e40]: repainting_fix.pine
+          - generic [ref=f9e47]:
+            - generic [ref=f9e48]:
+              - generic [ref=f9e49]: No file open
+              - generic [ref=f9e50]:
+                - button "Run" [disabled]
+            - paragraph [ref=f9e58]: The Pine Script PineDev writes for you will appear here.
+          - generic [ref=f9e59]:
+            - generic [ref=f9e60]:
+              - paragraph [ref=f9e61]: NQ ORB breakout
+              - generic [ref=f9e62]: Claude Sonnet
+            - paragraph [ref=f9e66]: Describe a strategy, or paste a compiler error…
+        - list [ref=f9e71]:
+          - listitem [ref=f9e72]: Targets Pine v6 only — no deprecated v4/v5 syntax mixed in
+          - listitem [ref=f9e75]: Every script is reviewed by a second pass before you see it
+          - listitem [ref=f9e78]: 10 models to choose from, all free to use on the Standard plan
+      - generic [ref=f9e82]:
+        - heading "What you get" [level=2] [ref=f9e83]
+        - heading "Everything you need to go from idea to script" [level=2] [ref=f9e84]
+        - generic [ref=f9e85]:
+          - generic [ref=f9e86]:
+            - generic [ref=f9e87]: Multi-model chat
+            - paragraph [ref=f9e93]: Pick from 10 models with different speed and quality tradeoffs, right from the chat header — switch mid-conversation with no loss of context.
+          - generic [ref=f9e94]:
+            - generic [ref=f9e95]: Self-reviewing agent
+            - paragraph [ref=f9e101]: After drafting a script, a second pass checks it against Pine v6's own pitfalls — repainting, series-vs-simple type errors, entry semantics — before it reaches you.
+          - generic [ref=f9e102]:
+            - generic [ref=f9e103]: Compiler-error fixing
+            - paragraph [ref=f9e115]: Paste a TradingView compiler error straight into the chat. PineDev reads the line it points to and returns a corrected script, with what was wrong explained.
+          - generic [ref=f9e116]:
+            - generic [ref=f9e117]: Versioned strategy library
+            - paragraph [ref=f9e122]: Save a script to your personal library with one click. Every later save keeps the version before it, so you can always get back to what worked.
+          - generic [ref=f9e123]:
+            - generic [ref=f9e124]: Transparent usage caps
+            - paragraph [ref=f9e130]: See exactly how many messages you've used today and this month on the Usage page — no surprise throttling, no hidden limits.
+          - generic [ref=f9e131]:
+            - generic [ref=f9e132]: Shareable chats
+            - paragraph [ref=f9e141]: Turn any chat into a read-only link when you want a second opinion or want to show someone exactly how a strategy came together.
+      - generic [ref=f9e143]:
+        - heading "How it works" [level=2] [ref=f9e144]
+        - generic [ref=f9e145]:
+          - generic [ref=f9e146]:
+            - text: "01"
+            - heading "Describe your strategy" [level=3] [ref=f9e147]
+            - paragraph [ref=f9e148]: Explain your entries, exits and risk rules in plain language, the way you'd explain it to a colleague. No Pine syntax knowledge required to get started.
+          - generic [ref=f9e149]:
+            - text: "02"
+            - heading "The agent writes Pine v6" [level=3] [ref=f9e150]
+            - paragraph [ref=f9e151]: PineDev returns a complete, copy-pasteable Pine Script v6 strategy, self-reviewed for the v6 pitfalls that trip up most hand-written scripts, ready for the TradingView editor.
+          - generic [ref=f9e152]:
+            - text: "03"
+            - heading "Paste errors, get fixes" [level=3] [ref=f9e153]
+            - paragraph [ref=f9e154]: Hit a compiler error, or want to iterate on the logic? Paste it back. PineDev returns the corrected or extended script and explains exactly what changed.
+      - generic [ref=f9e156]:
+        - heading "Model roster" [level=2] [ref=f9e157]
+        - heading "10 free models, one chat" [level=2] [ref=f9e158]
+        - paragraph [ref=f9e159]: Different models write Pine differently. Switch between them from the chat header at no extra cost on the Standard plan — no separate API key, no per-model billing.
+        - generic [ref=f9e160]:
+          - generic [ref=f9e161]:
+            - paragraph [ref=f9e162]: Nemotron Ultra
+            - paragraph [ref=f9e163]: Large and free. The most reliable of the free models on Pine.
+          - generic [ref=f9e164]:
+            - paragraph [ref=f9e165]: Nemotron Super
+            - paragraph [ref=f9e166]: Same lineage as Ultra, smaller and noticeably faster. A solid default.
+          - generic [ref=f9e167]:
+            - paragraph [ref=f9e168]: Nemotron Lightning
+            - paragraph [ref=f9e169]: Built for speed, with a 1M-token context — good for long scripts.
+          - generic [ref=f9e170]:
+            - paragraph [ref=f9e171]: Poolside Laguna
+            - paragraph [ref=f9e172]: From a lab focused specifically on code generation — a different lens on tricky logic.
+          - generic [ref=f9e173]:
+            - paragraph [ref=f9e174]: Cohere North Code
+            - paragraph [ref=f9e175]: Cohere's small code-tuned model. Fast, and built for exactly this kind of task.
+          - generic [ref=f9e176]:
+            - paragraph [ref=f9e177]: Gemma
+            - paragraph [ref=f9e178]: Google's general-purpose open model — a useful second opinion when another model gets stuck.
+          - generic [ref=f9e179]:
+            - paragraph [ref=f9e180]: Dots Note
+            - paragraph [ref=f9e181]: Faster and free. Good for small edits to an existing script.
+          - generic [ref=f9e182]:
+            - paragraph [ref=f9e183]: Inkling
+            - paragraph [ref=f9e184]: 1M-token context. Best when you're pasting in a long existing script to extend or debug.
+          - generic [ref=f9e185]:
+            - paragraph [ref=f9e186]: Ling Flash
+            - paragraph [ref=f9e187]: Quickest and free. Best when you want an answer immediately.
+          - generic [ref=f9e188]:
+            - paragraph [ref=f9e189]: LFM
+            - paragraph [ref=f9e190]: Small and extremely fast — best for quick yes/no questions about Pine syntax.
+      - generic [ref=f9e192]:
+        - heading "Pricing" [level=2] [ref=f9e193]
+        - heading "Simple pricing" [level=2] [ref=f9e194]
+        - generic [ref=f9e195]:
+          - generic [ref=f9e196]:
+            - generic [ref=f9e197]:
+              - generic [ref=f9e198]: Standard
+              - paragraph [ref=f9e199]: $39/mo
+            - generic [ref=f9e200]:
+              - list [ref=f9e201]:
+                - listitem [ref=f9e202]:
+                  - generic [ref=f9e205]: Chat with an AI agent that writes and fixes Pine Script v6
+                - listitem [ref=f9e206]:
+                  - generic [ref=f9e209]: Every script is reviewed by a second pass that checks for syntax errors and Pine v6 best practices before you see it
+                - listitem [ref=f9e210]:
+                  - generic [ref=f9e213]: 150 messages a day
+                - listitem [ref=f9e214]:
+                  - generic [ref=f9e217]: Choose from 10 models with different speed/quality tradeoffs
+                - listitem [ref=f9e218]:
+                  - generic [ref=f9e221]: Save strategies to a versioned personal library
+                - listitem [ref=f9e222]:
+                  - generic [ref=f9e225]: Share a chat with a read-only link
+                - listitem [ref=f9e226]:
+                  - generic [ref=f9e229]: Instant access — no waitlist
+              - button "Get started" [ref=f9e231]
+          - generic [ref=f9e232]:
+            - generic [ref=f9e233]:
+              - generic [ref=f9e234]: Pro
+              - generic [ref=f9e235]: Coming soon
+            - generic [ref=f9e236]:
+              - paragraph [ref=f9e237]: $139/mo
+              - list [ref=f9e238]:
+                - listitem [ref=f9e239]:
+                  - generic [ref=f9e242]: Everything in the Standard plan
+                - listitem [ref=f9e243]:
+                  - generic [ref=f9e246]: Access to our best available models
+                - listitem [ref=f9e247]:
+                  - generic [ref=f9e250]: Full validation — a verdict grade for every strategy
+                - listitem [ref=f9e251]:
+                  - generic [ref=f9e254]: Market regime analysis
+                - listitem [ref=f9e255]:
+                  - generic [ref=f9e258]: Monte Carlo simulation of a strategy's risk of ruin
+                - listitem [ref=f9e259]:
+                  - generic [ref=f9e262]: Higher daily limits
+              - generic [ref=f9e263]:
+                - paragraph [ref=f9e264]: Not available yet. Join the waitlist and we'll email you when it's ready.
+                - generic [ref=f9e266]:
+                  - generic [ref=f9e267]: Email address
+                  - textbox "Email address" [ref=f9e268]:
+                    - /placeholder: you@example.com
+                  - button "Join waitlist" [ref=f9e269]
+        - paragraph [ref=f9e270]:
+          - link "Full pricing details" [ref=f9e271] [cursor=pointer]:
+            - /url: /pricing
+      - generic [ref=f9e273]:
+        - heading "FAQ" [level=2] [ref=f9e274]
+        - heading "Questions" [level=2] [ref=f9e275]
+        - generic [ref=f9e276]:
+          - heading [level=3] [ref=f9e278]:
+            - button "Do I need a TradingView Pro account?" [ref=f9e279]
+          - heading [level=3] [ref=f9e281]:
+            - button "Does it only work with Pine v6?" [ref=f9e282]
+          - heading [level=3] [ref=f9e284]:
+            - button "What happens if the script doesn't compile?" [ref=f9e285]
+          - heading [level=3] [ref=f9e287]:
+            - button "Can I cancel anytime?" [ref=f9e288]
+          - heading [level=3] [ref=f9e290]:
+            - button "Is my strategy code private?" [ref=f9e291]
+      - generic [ref=f9e293]:
+        - heading "Stop hand-writing Pine Script." [level=2] [ref=f9e294]
+        - paragraph [ref=f9e295]: Describe your next strategy and have a working v6 script back in under a minute.
+        - link "Get Started" [ref=f9e296] [cursor=pointer]:
+          - /url: /login?mode=sign-up
+    - contentinfo [ref=f9e297]:
+      - generic [ref=f9e298]:
+        - generic [ref=f9e299]:
+          - text: PineDev
+          - paragraph [ref=f9e300]: AI agent for TradingView Pine Script v6.
+        - generic [ref=f9e301]:
+          - paragraph [ref=f9e302]: Product
+          - list [ref=f9e303]:
+            - listitem [ref=f9e304]:
+              - link "Features" [ref=f9e305] [cursor=pointer]:
+                - /url: "#features"
+            - listitem [ref=f9e306]:
+              - link "Pricing" [ref=f9e307] [cursor=pointer]:
+                - /url: /pricing
+            - listitem [ref=f9e308]:
+              - link "FAQ" [ref=f9e309] [cursor=pointer]:
+                - /url: "#faq"
+        - generic [ref=f9e310]:
+          - paragraph [ref=f9e311]: Account
+          - list [ref=f9e312]:
+            - listitem [ref=f9e313]:
+              - link "Log in" [ref=f9e314] [cursor=pointer]:
+                - /url: /login
+            - listitem [ref=f9e315]:
+              - link "Create account" [ref=f9e316] [cursor=pointer]:
+                - /url: /login?mode=sign-up
+        - generic [ref=f9e317]:
+          - paragraph [ref=f9e318]: Contact
+          - list [ref=f9e319]:
+            - listitem [ref=f9e320]: hello@pinedev.app
+      - generic [ref=f9e321]: © 2026 PineDev. All rights reserved.
+  - region "Notifications alt+T"

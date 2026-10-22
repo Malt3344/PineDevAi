@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import useSWR from "swr";
 import {
   ArrowUp,
   Brain,
-  Check,
-  ChevronDown,
+  ClipboardCheck,
+  Copy,
   FileCode,
   ListChecks,
   MessageSquare,
@@ -15,6 +16,8 @@ import {
   PanelRightOpen,
   Paperclip,
   Pencil,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -25,8 +28,14 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent as MessageBubble } from "@/components/ai-elements/message";
+import {
+  Message,
+  MessageAction,
+  MessageActions,
+  MessageContent as MessageBubble,
+} from "@/components/ai-elements/message";
 import { MessageContent } from "@/components/MessageContent";
+import { ModelSelector } from "@/components/model-selector";
 import {
   PromptInput,
   PromptInputActionAddAttachments,
@@ -42,21 +51,23 @@ import {
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import { StrategyEditorPanel } from "@/components/StrategyEditorPanel";
+import { ProtocolPanel, type StudyData } from "@/components/study/ProtocolPanel";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { AGENT_MODELS } from "@/lib/agent/models";
 import type { AgentMode, AgentStatus } from "@/lib/agent/generate-response";
-import { setConversationModel } from "@/app/chat/actions";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { setChatModel } from "@/app/chat/actions";
 import { extractLatestCodeBlock } from "@/lib/pine-code";
 import { usePersistedState } from "@/lib/use-persisted-state";
 import { cn } from "@/lib/utils";
+
+type Vote = { messageId: string; isUpvoted: boolean };
+
+async function fetcher(url: string): Promise<{ votes: Vote[] }> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Failed to load votes");
+  return res.json();
+}
 
 /**
  * Which pane fills the screen on a phone. Above `lg` all three are on
@@ -64,12 +75,16 @@ import { cn } from "@/lib/utils";
  * shows the explorer, the file and a side panel together when there is
  * room, and one at a time when there is not.
  */
-type Pane = "code" | "chat";
+type Pane = "protocol" | "code" | "chat";
 
 const PANES: { id: Pane; label: string; icon: typeof FileCode }[] = [
-  { id: "code", label: "Code", icon: FileCode },
+  { id: "protocol", label: "Protocol", icon: ClipboardCheck },
+  { id: "code", label: "Script", icon: FileCode },
   { id: "chat", label: "Chat", icon: MessageSquare },
 ];
+
+/** What fills the main pane at lg and up, where the chat is always beside it. */
+type Center = "protocol" | "code";
 
 /**
  * What the attach control accepts. Text-shaped files are inlined into the
@@ -110,30 +125,36 @@ function messageText(message: UIMessage): string {
 }
 
 /**
- * The active conversation view: a workspace panel (the user's real saved
- * strategies), a code panel showing whichever script is open, and a
- * narrower chat panel alongside it. Persistence of both the user's
- * message and the assistant's reply happens server-side in /api/chat.
+ * A study's workspace: the validation protocol (or the script it is
+ * testing) in the main pane, and the research assistant beside it.
+ * Persistence of both the user's message and the assistant's reply
+ * happens server-side in /api/chat.
  */
 export function ChatView({
-  conversationId,
-  conversationTitle,
+  chatId,
+  chatTitle,
   initialMessages,
   modelId,
+  study,
 }: {
-  conversationId: string;
-  conversationTitle: string;
+  chatId: string;
+  chatTitle: string;
   initialMessages: UIMessage[];
   modelId: string;
+  study: StudyData;
 }) {
-  const [pane, setPane] = useState<Pane>("chat");
+  const [pane, setPane] = useState<Pane>("protocol");
+  const [center, setCenter] = usePersistedState<Center>("pinedev:center-pane", "protocol");
   // Held locally so the label changes the instant it is picked; the server
   // action is what actually decides which model the next request uses.
   const [activeModelId, setActiveModelId] = useState(modelId);
-  const activeModel = AGENT_MODELS.find((m) => m.id === activeModelId);
   const [mode, setMode] = useState<AgentMode>("act");
   const [thinking, setThinking] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+  // Set once the first save of this chat's script succeeds; every later
+  // save reuses it so the document library gets versions of one document
+  // rather than a pile of unrelated saves.
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   const [chatWidth, setChatWidth] = usePersistedState(
     "pinedev:chat-width",
@@ -228,13 +249,13 @@ export function ChatView({
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        body: { conversationId },
+        body: { chatId },
       }),
-    [conversationId],
+    [chatId],
   );
 
   const { messages, sendMessage, status, error } = useChat({
-    id: conversationId,
+    id: chatId,
     messages: initialMessages,
     transport,
     // The server reports each real stage of the turn as a transient data
@@ -245,6 +266,27 @@ export function ChatView({
   });
 
   const isBusy = status === "submitted" || status === "streaming";
+
+  /**
+   * The protocol's "ask the assistant" buttons. They send a real message,
+   * visible in the transcript, rather than a hidden prompt — the user can
+   * see exactly what was asked on their behalf.
+   */
+  function askAssistant(text: string, askMode: AgentMode = "act") {
+    if (isBusy) {
+      toast.error("The assistant is still answering. Try again in a moment.");
+      return;
+    }
+    setMode(askMode);
+    setChatCollapsed(false);
+    setPane("chat");
+    sendMessage({ text }, { body: { mode: askMode, thinking } });
+  }
+
+  function openScript() {
+    setCenter("code");
+    setPane("code");
+  }
 
   // Clear the status once the turn is over, so a finished reply is not left
   // sitting under a stale "reviewing" line.
@@ -258,24 +300,32 @@ export function ChatView({
     messages.filter((m) => m.role === "assistant").map(messageText),
   );
 
-  // One workspace is one strategy: the editor always shows this
-  // conversation's own script, named after it.
-  const fileName = `${conversationTitle || "untitled"}.pine`;
+  // One workspace is one strategy: the editor always shows this chat's
+  // own script, named after it.
+  const fileName = `${chatTitle || "untitled"}.pine`;
 
-  /** Saves a code block from an assistant message into the user's strategy library. */
+  /**
+   * Saves a code block from an assistant message into the user's strategy
+   * library. The first save of this chat starts a new document; every
+   * save after that reuses `documentId`, so it becomes a new version of
+   * the same document instead of an unrelated new one.
+   */
   async function handleSaveCode(code: string) {
     const firstLine = code.split("\n")[0]?.replace(/^\/\/\s*/, "").slice(0, 80);
     try {
-      const res = await fetch("/api/strategies", {
+      const res = await fetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
           title: firstLine || "Untitled strategy",
-          conversationId,
+          chatId,
+          id: documentId,
         }),
       });
       if (!res.ok) throw new Error("Failed to save strategy");
+      const data: { document: { id: string } } = await res.json();
+      setDocumentId(data.document.id);
       toast.success("Saved to your strategy library");
     } catch {
       toast.error("Could not save that strategy");
@@ -283,29 +333,129 @@ export function ChatView({
     }
   }
 
+  // Votes for this chat's assistant messages, fetched once and kept fresh
+  // through optimistic mutations rather than a refetch on every click.
+  const { data: voteData, mutate: mutateVotes } = useSWR(
+    `/api/vote?chatId=${chatId}`,
+    fetcher,
+  );
+  const voteByMessageId = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const vote of voteData?.votes ?? []) map.set(vote.messageId, vote.isUpvoted);
+    return map;
+  }, [voteData]);
+
+  async function handleCopyMessage(text: string) {
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  }
+
+  /**
+   * Clicking the same vote again un-votes (a third, neutral state) rather
+   * than flipping straight to the opposite vote — DELETE clears the row,
+   * PATCH otherwise sets it to exactly the value clicked.
+   */
+  async function handleVote(messageId: string, isUpvoted: boolean) {
+    const current = voteByMessageId.get(messageId);
+    const isUnvote = current === isUpvoted;
+    const previousVotes = voteData?.votes ?? [];
+    const nextVotes = isUnvote
+      ? previousVotes.filter((v) => v.messageId !== messageId)
+      : [...previousVotes.filter((v) => v.messageId !== messageId), { messageId, isUpvoted }];
+
+    void mutateVotes({ votes: nextVotes }, { revalidate: false });
+
+    try {
+      if (isUnvote) {
+        await fetch("/api/vote", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId, messageId }),
+        });
+      } else {
+        await fetch("/api/vote", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatId, messageId, isUpvoted }),
+        });
+      }
+    } catch {
+      toast.error("Could not save your vote.");
+    } finally {
+      void mutateVotes();
+    }
+  }
+
   return (
     <div ref={shellRef} className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row lg:gap-2">
 
-      {/* Editor. */}
+      {/* Main pane: the protocol, or the script under test. */}
       <div
         ref={editorRef}
         className={cn(
           // min-w-0 at every width, not just lg: without it this pane
           // refuses to shrink below its widest line of code and widens the
-          // whole layout past the phone's viewport.
-          // min-w-0 at every width, not just lg: without it this pane
-          // refuses to shrink below its widest line of code and widens the
           // whole layout past the phone's viewport. The lg minimum is what
           // stops the divider squeezing the editor to nothing.
-          "min-h-0 min-w-0 overflow-hidden border-border bg-surface-raised lg:block lg:flex-1 lg:rounded-xl lg:border",
-          pane === "code" ? "flex flex-1" : "hidden",
+          "min-h-0 min-w-0 flex-col overflow-hidden border-border bg-surface-raised lg:flex lg:flex-1 lg:rounded-xl lg:border",
+          pane === "chat" ? "hidden" : "flex flex-1",
         )}
       >
-        <StrategyEditorPanel
-          code={latestCode}
-          fileName={fileName}
-          onSave={handleSaveCode}
-        />
+        {/* Desktop only: on a phone the pane switcher below does this job. */}
+        <div role="tablist" aria-label="Main pane" className="hidden h-10 shrink-0 items-end gap-1 border-b border-border px-2 lg:flex">
+          {(
+            [
+              { id: "protocol" as const, label: "Protocol", Icon: ClipboardCheck },
+              { id: "code" as const, label: "Script", Icon: FileCode },
+            ]
+          ).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={center === id}
+              onClick={() => setCenter(id)}
+              className={cn(
+                "-mb-px flex h-8 items-center gap-1.5 rounded-t-md border border-b-0 px-3 text-[0.8125rem] transition-colors",
+                center === id
+                  ? "border-border bg-background text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+        <div
+          className={cn(
+            "min-h-0 flex-1",
+            pane === "protocol" ? "flex" : "hidden",
+            center === "protocol" ? "lg:flex" : "lg:hidden",
+          )}
+        >
+          <ProtocolPanel
+            chatId={chatId}
+            study={study}
+            code={latestCode}
+            onAsk={askAssistant}
+            onOpenScript={openScript}
+          />
+        </div>
+        <div
+          className={cn(
+            "min-h-0 flex-1",
+            pane === "code" ? "flex" : "hidden",
+            center === "code" ? "lg:flex" : "lg:hidden",
+          )}
+        >
+          <StrategyEditorPanel
+            code={latestCode}
+            fileName={fileName}
+            onSave={handleSaveCode}
+            documentId={documentId}
+          />
+        </div>
       </div>
 
       {/* Divider. Only a control at lg and up, where the two panes are side
@@ -356,45 +506,15 @@ export function ChatView({
         )}
       >
         <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-border px-4">
-          <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight">{conversationTitle}</h1>
+          <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight">{chatTitle}</h1>
           <div className="flex shrink-0 items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Model"
-                  className="h-7 min-w-0 gap-1 text-xs text-muted-foreground"
-                >
-                  <span className="truncate">{activeModel?.label ?? activeModelId}</span>
-                  <ChevronDown className="size-3 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                {AGENT_MODELS.map((model) => (
-                  <DropdownMenuItem
-                    key={model.id}
-                    onClick={() => {
-                      setActiveModelId(model.id);
-                      void setConversationModel(conversationId, model.id);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "size-3.5",
-                        model.id === activeModelId ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex min-w-0 flex-col">
-                      <span>{model.label}</span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {model.description}
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ModelSelector
+              value={activeModelId}
+              onChange={(id) => {
+                setActiveModelId(id);
+                void setChatModel(chatId, id);
+              }}
+            />
             <Button
               variant="ghost"
               size="icon"
@@ -414,8 +534,8 @@ export function ChatView({
             {messages.length === 0 && (
               <ConversationEmptyState
                 icon={<FileCode className="size-5" />}
-                title="Describe your strategy"
-                description="Say what you want in plain language. The agent writes the Pine v6, and you can edit it in the panel next door."
+                title="Your research partner"
+                description="Describe the idea in plain language. The assistant helps you sharpen it into a testable hypothesis, writes the Pine v6, and explains every result in the protocol — including when the answer is no."
               />
             )}
             {messages.map((message) => (
@@ -427,9 +547,39 @@ export function ChatView({
                 {message.role === "user" ? (
                   <MessageBubble>{messageText(message)}</MessageBubble>
                 ) : (
-                  <div className="min-w-0 max-w-full text-sm">
-                    <MessageContent content={messageText(message)} onSaveCode={handleSaveCode} />
-                  </div>
+                  <>
+                    <div className="min-w-0 max-w-full text-sm">
+                      <MessageContent content={messageText(message)} onSaveCode={handleSaveCode} />
+                    </div>
+                    <MessageActions className="opacity-0 transition-opacity group-hover:opacity-100">
+                      <MessageAction
+                        tooltip="Copy"
+                        onClick={() => void handleCopyMessage(messageText(message))}
+                      >
+                        <Copy className="size-3.5" />
+                      </MessageAction>
+                      <MessageAction
+                        tooltip="Good response"
+                        aria-pressed={voteByMessageId.get(message.id) === true}
+                        className={cn(
+                          voteByMessageId.get(message.id) === true && "text-primary",
+                        )}
+                        onClick={() => void handleVote(message.id, true)}
+                      >
+                        <ThumbsUp className="size-3.5" />
+                      </MessageAction>
+                      <MessageAction
+                        tooltip="Bad response"
+                        aria-pressed={voteByMessageId.get(message.id) === false}
+                        className={cn(
+                          voteByMessageId.get(message.id) === false && "text-destructive",
+                        )}
+                        onClick={() => void handleVote(message.id, false)}
+                      >
+                        <ThumbsDown className="size-3.5" />
+                      </MessageAction>
+                    </MessageActions>
+                  </>
                 )}
               </Message>
             ))}
@@ -459,8 +609,8 @@ export function ChatView({
               <PromptInputTextarea
                 placeholder={
                   mode === "plan"
-                    ? "Describe the strategy — the agent plans it before writing anything…"
-                    : "Describe a strategy, or paste a compiler error…"
+                    ? "Describe the idea — the assistant plans the research before any code…"
+                    : "Ask about the study, describe a strategy, or paste a compiler error…"
                 }
               />
             </PromptInputBody>

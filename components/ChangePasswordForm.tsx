@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { createClient } from "@/lib/supabase/browser";
+import { changePasswordAction } from "@/app/chat/account/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ type Status = "idle" | "loading" | "done" | "error";
 
 /**
  * Lets an already-authenticated user set a new password directly —
- * separate from the "forgot password" email flow, which is for someone
- * who can't sign in at all. Works the same whether they originally
+ * separate from the "forgot password" support-email flow, which is for
+ * someone who can't sign in at all. Works the same whether they originally
  * signed up with a password or with Google; either way this just sets
  * (or replaces) the password on their account.
  */
@@ -25,12 +25,11 @@ export function ChangePasswordForm() {
     setStatus("loading");
     setErrorMessage("");
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password });
+    const result = await changePasswordAction(password);
 
-    if (error) {
+    if (!result.ok) {
       setStatus("error");
-      setErrorMessage(error.message);
+      setErrorMessage(result.error);
       return;
     }
 

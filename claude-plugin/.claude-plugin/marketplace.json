@@ -1,0 +1,15 @@
+{
+  "name": "pinedev",
+  "description": "PineDev — validate TradingView Pine Script v6 strategies the way quants do.",
+  "owner": {
+    "name": "PineDev",
+    "email": "hello@pinedev.app"
+  },
+  "plugins": [
+    {
+      "name": "pinedev",
+      "source": "./plugins/pinedev",
+      "description": "Write robust Pine Script v6 strategies and take them through PineDev's seven-stage validation protocol."
+    }
+  ]
+}

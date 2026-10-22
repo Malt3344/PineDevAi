@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
-import { listStrategies } from "@/lib/strategies";
+import { listDocuments } from "@/lib/documents";
 import { db } from "@/lib/db/client";
 import { StrategyList } from "@/components/StrategyList";
 
-/** Lists the current user's saved Pine Script strategies. */
+/** Lists the current user's saved Pine Script strategies — the scripts behind their studies. */
 export default async function StrategiesPage() {
   const gate = await getApprovedUser();
 
@@ -16,22 +16,22 @@ export default async function StrategiesPage() {
     redirect("/chat");
   }
 
-  const strategies = await listStrategies(db, gate.user.id);
+  const documents = await listDocuments(db, gate.user.id);
 
   return (
     <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-lg font-medium">Saved strategies</h1>
+        <h1 className="text-lg font-medium">Script library</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Scripts you saved from the chat, in one place.
+          Every script you saved from a study, with its version history.
         </p>
         <div className="mt-6">
           <StrategyList
-            strategies={strategies.map((s) => ({
-              id: s.id,
-              title: s.title,
-              code: s.code,
-              createdAt: s.createdAt.toISOString(),
+            strategies={documents.map((d) => ({
+              id: d.id,
+              title: d.title,
+              code: d.content,
+              createdAt: d.createdAt.toISOString(),
             }))}
           />
         </div>

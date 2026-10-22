@@ -1,0 +1,327 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link [ref=e5] [cursor=pointer]:
+          - /url: /
+        - navigation [ref=e9]:
+          - link "Protocol" [ref=e10] [cursor=pointer]:
+            - /url: /#protocol
+          - link "Methodology" [ref=e11] [cursor=pointer]:
+            - /url: /methodology
+          - link "Pricing" [ref=e12] [cursor=pointer]:
+            - /url: /pricing
+        - generic [ref=e13]:
+          - link "Log in" [ref=e14] [cursor=pointer]:
+            - /url: /login
+          - link "Get started" [ref=e15] [cursor=pointer]:
+            - /url: /login?mode=sign-up
+    - main [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: A research protocol for retail traders
+        - heading "Validate your strategy the way quants do." [level=1] [ref=e19]: Validate your strategythe way quants do.
+        - paragraph [ref=e20]: Most backtests are lucky. PineDev takes a trading idea through the same seven-stage protocol systematic funds use — pre-registration, deflated Sharpe, Monte Carlo, cost stress and a one-shot out-of-sample test — and tells you plainly whether it holds up before your money finds out.
+        - generic [ref=e21]:
+          - link "Validate a strategy" [ref=e22] [cursor=pointer]:
+            - /url: /login?mode=sign-up
+          - link "Read the methodology" [ref=e23] [cursor=pointer]:
+            - /url: /methodology
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - article [ref=e26]:
+              - generic [ref=e27]:
+                - generic [ref=e28]:
+                  - heading "Opening-range breakout" [level=3] [ref=e29]
+                  - paragraph [ref=e30]: ES1! · 15m · 5 trials counted
+                - generic [ref=e31]: Validated
+              - generic [ref=e35]:
+                - generic [ref=e36]:
+                  - paragraph [ref=e37]: Backtest PF
+                  - paragraph [ref=e38]: "1.46"
+                - generic [ref=e39]:
+                  - paragraph [ref=e40]: Deflated Sharpe
+                  - paragraph [ref=e41]: 98.7%
+                - generic [ref=e42]:
+                  - paragraph [ref=e43]: Out-of-sample PF
+                  - paragraph [ref=e44]: "1.37"
+              - generic [ref=e45]:
+                - paragraph [ref=e46]: Monte Carlo band, in-sample trades
+                - img "Monte Carlo equity band" [ref=e47]
+              - list [ref=e50]:
+                - listitem [ref=e51]:
+                  - img "Pass" [ref=e52]
+                  - generic [ref=e55]: Enough trades
+                - listitem [ref=e56]:
+                  - img "Pass" [ref=e57]
+                  - generic [ref=e60]: In-sample profit factor
+                - listitem [ref=e61]:
+                  - img "Pass" [ref=e62]
+                  - generic [ref=e65]: Deflated Sharpe ratio
+                - listitem [ref=e66]:
+                  - img "Pass" [ref=e67]
+                  - generic [ref=e70]: Monte Carlo drawdown (95th pct.)
+                - listitem [ref=e71]:
+                  - img "Pass" [ref=e72]
+                  - generic [ref=e75]: Survives doubled costs
+                - listitem [ref=e76]:
+                  - img "Pass" [ref=e77]
+                  - generic [ref=e80]: Not carried by a few trades
+                - listitem [ref=e81]:
+                  - img "Pass" [ref=e82]
+                  - generic [ref=e85]: Consistent across periods
+                - listitem [ref=e86]:
+                  - img "Pass" [ref=e87]
+                  - generic [ref=e90]: Out-of-sample profit factor
+                - listitem [ref=e91]:
+                  - img "Pass" [ref=e92]
+                  - generic [ref=e95]: Out-of-sample efficiency
+                - listitem [ref=e96]:
+                  - img "Pass" [ref=e97]
+                  - generic [ref=e100]: Out-of-sample drawdown in range
+            - article [ref=e101]:
+              - generic [ref=e102]:
+                - generic [ref=e103]:
+                  - heading "RSI + MACD + Bollinger combo" [level=3] [ref=e104]
+                  - paragraph [ref=e105]: BTCUSDT · 1h · 56 trials counted
+                - generic [ref=e106]: Rejected
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - paragraph [ref=e113]: Backtest PF
+                  - paragraph [ref=e114]: "1.85"
+                - generic [ref=e115]:
+                  - paragraph [ref=e116]: Deflated Sharpe
+                  - paragraph [ref=e117]: 81.2%
+                - generic [ref=e118]:
+                  - paragraph [ref=e119]: Out-of-sample PF
+                  - paragraph [ref=e120]: "0.47"
+              - generic [ref=e121]:
+                - paragraph [ref=e122]: Monte Carlo band, in-sample trades
+                - img "Monte Carlo equity band" [ref=e123]
+              - list [ref=e126]:
+                - listitem [ref=e127]:
+                  - img "Pass" [ref=e128]
+                  - generic [ref=e131]: Enough trades
+                - listitem [ref=e132]:
+                  - img "Pass" [ref=e133]
+                  - generic [ref=e136]: In-sample profit factor
+                - listitem [ref=e137]:
+                  - img "Fail" [ref=e138]
+                  - generic [ref=e142]: Deflated Sharpe ratio
+                - listitem [ref=e143]:
+                  - img "Pass" [ref=e144]
+                  - generic [ref=e147]: Monte Carlo drawdown (95th pct.)
+                - listitem [ref=e148]:
+                  - img "Pass" [ref=e149]
+                  - generic [ref=e152]: Survives doubled costs
+                - listitem [ref=e153]:
+                  - img "Pass" [ref=e154]
+                  - generic [ref=e157]: Not carried by a few trades
+                - listitem [ref=e158]:
+                  - img "Pass" [ref=e159]
+                  - generic [ref=e162]: Consistent across periods
+                - listitem [ref=e163]:
+                  - img "Fail" [ref=e164]
+                  - generic [ref=e168]: Out-of-sample profit factor
+                - listitem [ref=e169]:
+                  - img "Fail" [ref=e170]
+                  - generic [ref=e174]: Out-of-sample efficiency
+                - listitem [ref=e175]:
+                  - img "Fail" [ref=e176]
+                  - generic [ref=e180]: Out-of-sample drawdown in range
+          - paragraph [ref=e181]: Two example studies, computed by the same engine your uploads go through. The one on the right had the better backtest.
+      - generic [ref=e183]:
+        - heading "The problem" [level=2] [ref=e184]
+        - heading "Why a good backtest loses money live" [level=2] [ref=e185]
+        - generic [ref=e186]:
+          - generic [ref=e187]:
+            - generic [ref=e188]: You tried 40 versions
+            - paragraph [ref=e194]: Tweak the RSI length, the stop, the session filter, and one combination will look great on any data — including random data. A backtest never tells you how many attempts it took.
+          - generic [ref=e195]:
+            - generic [ref=e196]: The drawdown was lucky
+            - paragraph [ref=e205]: Your backtest's worst stretch is one ordering of the trades. Reshuffle them and the drawdown is often twice as deep. That is the one you will size into.
+          - generic [ref=e206]:
+            - generic [ref=e207]: The fills were free
+            - paragraph [ref=e213]: A thin edge disappears the moment slippage is realistic. If doubling costs turns the equity curve red, the edge was never wider than the spread.
+      - generic [ref=e215]:
+        - heading "The protocol" [level=2] [ref=e216]
+        - heading "Seven stages, in order, no skipping" [level=2] [ref=e217]
+        - paragraph [ref=e218]: "Each stage unlocks the next. The order is the discipline: you commit to what you believe before the data can talk you into something else."
+        - list [ref=e219]:
+          - listitem [ref=e220]:
+            - generic [ref=e221]: "01"
+            - generic [ref=e222]:
+              - heading "Hypothesis" [level=3] [ref=e223]
+              - paragraph [ref=e224]: Pre-register the edge and the pass criteria before seeing any results.
+          - listitem [ref=e225]:
+            - generic [ref=e226]: "02"
+            - generic [ref=e227]:
+              - heading "Build" [level=3] [ref=e228]
+              - paragraph [ref=e229]: Implement the rules in Pine v6, with costs and a date window built in.
+          - listitem [ref=e230]:
+            - generic [ref=e231]: "03"
+            - generic [ref=e232]:
+              - heading "In-sample" [level=3] [ref=e233]
+              - paragraph [ref=e234]: Backtest on the development window only and upload the trade list.
+          - listitem [ref=e235]:
+            - generic [ref=e236]: "04"
+            - generic [ref=e237]:
+              - heading "Stress test" [level=3] [ref=e238]
+              - paragraph [ref=e239]: Monte Carlo, cost stress, outlier removal and deflated Sharpe.
+          - listitem [ref=e240]:
+            - generic [ref=e241]: "05"
+            - generic [ref=e242]:
+              - heading "Out-of-sample" [level=3] [ref=e243]
+              - paragraph [ref=e244]: One run on held-out data the strategy was never tuned on.
+          - listitem [ref=e245]:
+            - generic [ref=e246]: "06"
+            - generic [ref=e247]:
+              - heading "Verdict" [level=3] [ref=e248]
+              - paragraph [ref=e249]: Every pre-registered criterion, scored. No partial credit.
+          - listitem [ref=e250]:
+            - generic [ref=e251]: "07"
+            - generic [ref=e252]:
+              - heading "Incubation" [level=3] [ref=e253]
+              - paragraph [ref=e254]: Paper or small-size live trades, checked against the simulated band.
+      - generic [ref=e256]:
+        - heading "What gets measured" [level=2] [ref=e257]
+        - heading "The tests a fund would run, on your TradingView trades" [level=2] [ref=e258]
+        - paragraph [ref=e259]: Export the list of trades from TradingView's Strategy Tester and upload it. Every number is computed from your trades, and every formula is documented.
+        - generic [ref=e260]:
+          - generic [ref=e261]:
+            - generic [ref=e262]: Pre-registration
+            - paragraph [ref=e268]: Hypothesis, data split and pass criteria are locked before the first backtest. Amending is allowed — and counted.
+          - generic [ref=e269]:
+            - generic [ref=e270]: Deflated Sharpe ratio
+            - paragraph [ref=e275]: The probability your Sharpe beats the best of N strategies with no edge, where N is every variant you uploaded. Re-running makes it harder, not easier.
+          - generic [ref=e276]:
+            - generic [ref=e277]: Monte Carlo drawdown
+            - paragraph [ref=e286]: Thousands of bootstrapped trade histories give the drawdown you should plan for, and the odds of hitting your own pain limit.
+          - generic [ref=e287]:
+            - generic [ref=e288]: Cost and outlier stress
+            - paragraph [ref=e295]: The same trades at double and triple costs, and with the best 5% removed. Real edges survive both.
+          - generic [ref=e296]:
+            - generic [ref=e297]: One-shot out-of-sample
+            - paragraph [ref=e307]: Held-out data, opened once. Efficiency against in-sample, and drawdown against the simulated band. A second look is recorded.
+          - generic [ref=e308]:
+            - generic [ref=e309]: Pine v6, built for testing
+            - paragraph [ref=e317]: The research assistant writes the strategy with costs, a date window and no lookahead, then lints it for the ways backtests lie.
+      - generic [ref=e319]:
+        - generic [ref=e320]:
+          - heading "Research assistant" [level=2] [ref=e321]
+          - heading "An AI that argues with you, not one that agrees" [level=2] [ref=e322]
+          - paragraph [ref=e323]: The assistant sits in every study and sees its hypothesis and results. It sharpens a vague idea into testable rules, writes the Pine v6 with the protocol scaffold, and explains each statistic with your own numbers. It will also tell you when a strategy is not worth trading — and it will not help you tune on the sealed data.
+        - generic [ref=e324]:
+          - generic [ref=e325]: The OOS profit factor was 0.9. If I change the stop to 1.5 ATR it's 1.4 — can we use that?
+          - paragraph [ref=e330]: No — that 1.4 was found by looking at the out-of-sample data, so it is now in-sample. The honest result is the 0.9. If you believe the wider stop is better for a reason you can state, amend the hypothesis and test it on fresh data; it will count as another trial.
+      - generic [ref=e332]:
+        - heading "Pricing" [level=2] [ref=e333]
+        - heading "Cheaper than one bad trade" [level=2] [ref=e334]
+        - generic [ref=e335]:
+          - generic [ref=e336]:
+            - generic [ref=e337]:
+              - generic [ref=e338]: Standard
+              - paragraph [ref=e339]: $39/mo
+            - generic [ref=e340]:
+              - list [ref=e341]:
+                - listitem [ref=e342]:
+                  - generic [ref=e345]: Unlimited studies through the seven-stage validation protocol
+                - listitem [ref=e346]:
+                  - generic [ref=e349]: Pre-registered hypotheses and pass criteria, locked before results
+                - listitem [ref=e350]:
+                  - generic [ref=e353]: Deflated Sharpe ratio that counts every variant you tried
+                - listitem [ref=e354]:
+                  - generic [ref=e357]: Monte Carlo drawdown bands, cost stress and outlier removal
+                - listitem [ref=e358]:
+                  - generic [ref=e361]: One-shot out-of-sample test with contamination tracking
+                - listitem [ref=e362]:
+                  - generic [ref=e365]: Incubation tracking against the simulated band
+                - listitem [ref=e366]:
+                  - generic [ref=e369]: A research assistant that builds Pine v6 with the protocol scaffold — 150 messages a day, 10 models
+                - listitem [ref=e370]:
+                  - generic [ref=e373]: Share a study's verdict with a read-only link
+              - button "Get started" [ref=e375]
+          - generic [ref=e376]:
+            - generic [ref=e377]:
+              - generic [ref=e378]: Pro
+              - generic [ref=e379]: Coming soon
+            - generic [ref=e380]:
+              - paragraph [ref=e381]: $139/mo
+              - list [ref=e382]:
+                - listitem [ref=e383]:
+                  - generic [ref=e386]: Everything in the Standard plan
+                - listitem [ref=e387]:
+                  - generic [ref=e390]: "Portfolio view: correlation between validated strategies"
+                - listitem [ref=e391]:
+                  - generic [ref=e394]: Multi-fold walk-forward analysis
+                - listitem [ref=e395]:
+                  - generic [ref=e398]: Automatic incubation tracking from TradingView alerts
+                - listitem [ref=e399]:
+                  - generic [ref=e402]: Access to our best available models
+                - listitem [ref=e403]:
+                  - generic [ref=e406]: Higher daily limits
+              - generic [ref=e407]:
+                - paragraph [ref=e408]: Not available yet. Join the waitlist and we'll email you when it's ready.
+                - generic [ref=e410]:
+                  - generic [ref=e411]: Email address
+                  - textbox "Email address" [ref=e412]:
+                    - /placeholder: you@example.com
+                  - button "Join waitlist" [ref=e413]
+        - paragraph [ref=e414]:
+          - link "Full pricing details" [ref=e415] [cursor=pointer]:
+            - /url: /pricing
+      - generic [ref=e417]:
+        - heading "FAQ" [level=2] [ref=e418]
+        - heading "Questions" [level=2] [ref=e419]
+        - generic [ref=e420]:
+          - heading [level=3] [ref=e422]:
+            - button "Why not just look at TradingView's Strategy Tester?" [ref=e423]
+          - heading [level=3] [ref=e425]:
+            - button "What is a deflated Sharpe ratio, and why does it go down when I re-run?" [ref=e426]
+          - heading [level=3] [ref=e428]:
+            - button "Does PineDev run my backtest?" [ref=e429]
+          - heading [level=3] [ref=e431]:
+            - button "Why can I only run the out-of-sample test once?" [ref=e432]
+          - heading [level=3] [ref=e434]:
+            - button "Is a 'Validated' strategy guaranteed to make money?" [ref=e435]
+          - heading [level=3] [ref=e437]:
+            - button "Can I cancel anytime?" [ref=e438]
+          - heading [level=3] [ref=e440]:
+            - button "Is my strategy private?" [ref=e441]
+      - generic [ref=e443]:
+        - heading "Find out before the market tells you." [level=2] [ref=e444]
+        - paragraph [ref=e445]: Take your best idea through the protocol. If it survives, you will know why. If it does not, you just kept the money.
+        - link "Start a study" [ref=e446] [cursor=pointer]:
+          - /url: /login?mode=sign-up
+    - contentinfo [ref=e447]:
+      - generic [ref=e448]:
+        - generic [ref=e449]:
+          - link [ref=e450] [cursor=pointer]:
+            - /url: /
+          - paragraph [ref=e454]: Strategy validation for retail traders. Built on TradingView Pine Script v6.
+        - generic [ref=e455]:
+          - paragraph [ref=e456]: Product
+          - list [ref=e457]:
+            - listitem [ref=e458]:
+              - link "The protocol" [ref=e459] [cursor=pointer]:
+                - /url: /#protocol
+            - listitem [ref=e460]:
+              - link "Methodology" [ref=e461] [cursor=pointer]:
+                - /url: /methodology
+            - listitem [ref=e462]:
+              - link "Pricing" [ref=e463] [cursor=pointer]:
+                - /url: /pricing
+        - generic [ref=e464]:
+          - paragraph [ref=e465]: Account
+          - list [ref=e466]:
+            - listitem [ref=e467]:
+              - link "Log in" [ref=e468] [cursor=pointer]:
+                - /url: /login
+            - listitem [ref=e469]:
+              - link "Create account" [ref=e470] [cursor=pointer]:
+                - /url: /login?mode=sign-up
+        - generic [ref=e471]:
+          - paragraph [ref=e472]: Contact
+          - list [ref=e473]:
+            - listitem [ref=e474]: hello@pinedev.app
+      - generic [ref=e475]: © 2026 PineDev. Educational research software, not financial advice. Past performance, simulated or backtested, does not guarantee future results.
+  - region "Notifications alt+T"

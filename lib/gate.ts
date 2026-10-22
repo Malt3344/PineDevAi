@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
-import { profiles } from "@/lib/db/schema";
+import { users } from "@/lib/db/schema";
 
 export type SubscriptionStatus = "free" | "active" | "past_due" | "canceled";
 
@@ -22,33 +22,33 @@ export type GateResult =
  * itself — middleware redirecting unauthenticated visitors is only a UX
  * convenience and is never relied on for security.
  *
- * Checks the profiles.isApproved column for access, and also returns the
- * subscriptionStatus (set only by the Stripe webhook) so callers such as
- * the daily message cap can vary behavior by plan.
+ * Checks the users.isApproved column for access — true for everyone by
+ * default; false only if an admin has manually suspended the account — and
+ * also returns the subscriptionStatus (set only by the Stripe webhook) so
+ * callers such as the daily message cap can vary behavior by plan. Free
+ * accounts are "approved" the moment they sign up; only the paid plan
+ * requires Stripe, and that is a subscriptionStatus check, not this one.
  */
 export async function getApprovedUser(): Promise<GateResult> {
-  const supabase = await createClient();
+  const session = await auth();
+  const sessionUser = session?.user;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !user.email) {
+  if (!sessionUser?.id || !sessionUser.email) {
     return { status: "unauthenticated" };
   }
 
-  const [profile] = await db
-    .select({ isApproved: profiles.isApproved, subscriptionStatus: profiles.subscriptionStatus })
-    .from(profiles)
-    .where(eq(profiles.id, user.id));
+  const [user] = await db
+    .select({ isApproved: users.isApproved, subscriptionStatus: users.subscriptionStatus })
+    .from(users)
+    .where(eq(users.id, sessionUser.id));
 
   const approvedUser: ApprovedUser = {
-    id: user.id,
-    email: user.email,
-    subscriptionStatus: profile?.subscriptionStatus ?? "free",
+    id: sessionUser.id,
+    email: sessionUser.email,
+    subscriptionStatus: user?.subscriptionStatus ?? "free",
   };
 
-  if (!profile?.isApproved) {
+  if (!user?.isApproved) {
     return { status: "unapproved", user: approvedUser };
   }
 

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, MessageSquare, NotebookText, Plus, Settings } from "lucide-react";
-import { createConversation, signOutAction } from "@/app/chat/actions";
+import { BookOpen, FlaskConical, LayoutDashboard, LogOut, NotebookText, Plug, Plus, Settings } from "lucide-react";
+import { createChat, signOutAction } from "@/app/chat/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { SidebarHistory, type SidebarChat } from "@/components/sidebar-history";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +20,12 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-
-type Conversation = { id: string; title: string };
 
 function initialsFor(email: string): string {
   return email.slice(0, 2).toUpperCase();
@@ -43,7 +41,7 @@ export function ConversationSidebar({
   conversations,
   userEmail,
 }: {
-  conversations: Conversation[];
+  conversations: SidebarChat[];
   userEmail: string;
 }) {
   const pathname = usePathname();
@@ -56,12 +54,12 @@ export function ConversationSidebar({
             <SidebarMenuButton size="lg" asChild>
               <Link href="/chat">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <NotebookText className="size-4" />
+                  <FlaskConical className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold">PineDev</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    Pine Script v6
+                    Strategy validation
                   </span>
                 </div>
               </Link>
@@ -75,26 +73,50 @@ export function ConversationSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <form action={createConversation}>
+                <form action={createChat}>
                   <SidebarMenuButton
                     type="submit"
-                    tooltip="New strategy"
+                    tooltip="New study"
                     className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
                   >
                     <Plus />
-                    <span>New strategy</span>
+                    <span>New study</span>
                   </SidebarMenuButton>
                 </form>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Connect Claude" isActive={pathname === "/chat/connect"}>
+                  <Link href="/chat/connect">
+                    <Plug />
+                    <span>Connect Claude</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Research desk" isActive={pathname === "/chat"}>
+                  <Link href="/chat">
+                    <LayoutDashboard />
+                    <span>Research desk</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  tooltip="Saved strategies"
+                  tooltip="Script library"
                   isActive={pathname === "/chat/strategies"}
                 >
                   <Link href="/chat/strategies">
                     <NotebookText />
-                    <span>Saved strategies</span>
+                    <span>Script library</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Methodology">
+                  <Link href="/methodology">
+                    <BookOpen />
+                    <span>Methodology</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -102,33 +124,7 @@ export function ConversationSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-          <SidebarGroupLabel>Strategies</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {conversations.length === 0 ? (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">
-                  Nothing yet. Start one above.
-                </p>
-              ) : (
-                conversations.map((conversation) => {
-                  const href = `/chat/${conversation.id}`;
-                  const title = conversation.title || "New strategy";
-                  return (
-                    <SidebarMenuItem key={conversation.id}>
-                      <SidebarMenuButton asChild isActive={pathname === href} tooltip={title}>
-                        <Link href={href}>
-                          <MessageSquare />
-                          <span className="truncate">{title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <SidebarHistory chats={conversations} />
       </SidebarContent>
 
       <SidebarFooter>

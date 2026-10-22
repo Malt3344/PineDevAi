@@ -3,8 +3,10 @@ import postgres from "postgres";
 import * as schema from "./schema";
 
 // `prepare: false` is required for Supabase's transaction-mode connection
-// pooler (Supavisor), which this app is expected to run against on
-// serverless platforms like Vercel.
+// pooler (Supavisor). Auth now runs through Auth.js instead of Supabase
+// Auth, but Postgres itself is still expected to be hosted on the same
+// Supabase project on serverless platforms like Vercel — only the Auth
+// product was dropped, not the database.
 const client = postgres(process.env.DATABASE_URL!, { prepare: false });
 
 export const db = drizzle(client, { schema });

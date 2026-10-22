@@ -123,7 +123,7 @@ describe("generateResponse", () => {
     // makes the turn happen.
     await readStreamedText(await generateResponse({ messages: [], onFinish }));
 
-    expect(onFinish).toHaveBeenCalledWith({ text: "hello" });
+    expect(onFinish).toHaveBeenCalledWith({ text: "hello", id: expect.any(String) });
   });
 
   describe("fallback", () => {

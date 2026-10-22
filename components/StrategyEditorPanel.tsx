@@ -3,12 +3,32 @@
 import { useEffect, useRef, useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Bookmark, BookmarkCheck, Check, Copy, FileCode, Play } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, Copy, FileCode, History, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+type DocumentVersion = { createdAt: string; content: string };
+
+/** "2 hours ago", "3 days ago", etc — coarse, good enough for a version list. */
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
 
 /**
  * The highlighted layer and the textarea must lay out identically, glyph
@@ -41,14 +61,20 @@ export function StrategyEditorPanel({
   code,
   fileName,
   onSave,
+  documentId,
 }: {
   code: string | null;
   fileName: string;
   onSave?: (code: string) => Promise<void>;
+  /** Once a document exists for this editing session, its id — enables
+   * the version-history dropdown. Null before the first successful save. */
+  documentId?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [draft, setDraft] = useState(code ?? "");
+  const [versions, setVersions] = useState<DocumentVersion[] | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
@@ -59,6 +85,34 @@ export function StrategyEditorPanel({
   useEffect(() => {
     setDraft(code ?? "");
   }, [code]);
+
+  // A fresh document (or none yet) invalidates whatever version list was
+  // fetched for the previous one.
+  useEffect(() => {
+    setVersions(null);
+  }, [documentId]);
+
+  async function loadVersions() {
+    if (!documentId || versionsLoading) return;
+    setVersionsLoading(true);
+    try {
+      const res = await fetch(`/api/documents/${documentId}`);
+      if (!res.ok) throw new Error("Failed to load versions");
+      const data: { versions: DocumentVersion[] } = await res.json();
+      setVersions(data.versions);
+    } catch {
+      setVersions([]);
+    } finally {
+      setVersionsLoading(false);
+    }
+  }
+
+  /** Loads a past version into the draft. Does not save — Save is still a
+   * separate, explicit step, so looking at an old version is never
+   * mistaken for restoring it. */
+  function handleSelectVersion(version: DocumentVersion) {
+    setDraft(version.content);
+  }
 
   /** Keeps the colour layer and the line numbers under the caret. */
   function syncScroll() {
@@ -143,6 +197,37 @@ export function StrategyEditorPanel({
               {saveStatus === "saved" ? <BookmarkCheck /> : <Bookmark />}
               <span className="hidden sm:inline">{saveLabel}</span>
             </Button>
+          )}
+          {documentId && (
+            <DropdownMenu onOpenChange={(open) => open && loadVersions()}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Version history"
+                  className="size-11 sm:h-7 sm:w-auto"
+                >
+                  <History />
+                  <span className="hidden sm:inline">History</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {versionsLoading && !versions ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">Loading…</div>
+                ) : !versions || versions.length === 0 ? (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No saved versions yet.</div>
+                ) : (
+                  versions.map((version, i) => (
+                    <DropdownMenuItem
+                      key={version.createdAt}
+                      onClick={() => handleSelectVersion(version)}
+                    >
+                      {i === 0 ? "Current" : relativeTime(version.createdAt)}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {code && (
             <Button

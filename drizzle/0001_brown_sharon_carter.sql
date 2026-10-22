@@ -1,0 +1,1 @@
+ALTER TABLE "user" ALTER COLUMN "isApproved" SET DEFAULT true;

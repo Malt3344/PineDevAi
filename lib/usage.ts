@@ -1,6 +1,6 @@
 import { and, count, eq } from "drizzle-orm";
 import type { db as Db } from "@/lib/db/client";
-import { conversations, messages, strategies } from "@/lib/db/schema";
+import { chats, documents, messages } from "@/lib/db/schema";
 import { capForSubscription, countMessagesToday } from "@/lib/daily-cap";
 import type { SubscriptionStatus } from "@/lib/gate";
 
@@ -14,7 +14,7 @@ export type UsageSummary = {
 
 async function countRows(
   db: typeof Db,
-  table: typeof messages | typeof conversations | typeof strategies,
+  table: typeof messages | typeof chats | typeof documents,
   userId: string,
   extra?: ReturnType<typeof eq>,
 ): Promise<number> {
@@ -44,8 +44,8 @@ export async function getUsageSummary(
     await Promise.all([
       countMessagesToday(db, userId),
       countRows(db, messages, userId, eq(messages.role, "user")),
-      countRows(db, conversations, userId),
-      countRows(db, strategies, userId),
+      countRows(db, chats, userId),
+      countRows(db, documents, userId),
     ]);
 
   return {

@@ -7,8 +7,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/app/chat/actions", () => ({
-  createConversation: vi.fn(),
+  createChat: vi.fn(),
   signOutAction: vi.fn(),
+  renameChat: vi.fn(),
+  deleteChat: vi.fn(),
+  setChatVisibility: vi.fn(),
 }));
 
 vi.mock("@/app/chat/account/billing/actions", () => ({
@@ -33,7 +36,9 @@ describe("ConversationSidebar account menu", () => {
     render(
       <SidebarProvider>
         <ConversationSidebar
-          conversations={[{ id: "c1", title: "My strategy" }]}
+          conversations={[
+            { id: "c1", title: "My strategy", createdAt: new Date(), visibility: "private" },
+          ]}
           userEmail="test@example.com"
         />
       </SidebarProvider>,

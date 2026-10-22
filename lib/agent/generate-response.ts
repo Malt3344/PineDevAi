@@ -66,7 +66,7 @@ export type UsageEvent = {
   outputTokens: number | undefined;
 };
 
-type OnFinish = (result: { text: string }) => void | Promise<void>;
+type OnFinish = (result: { text: string; id: string }) => void | Promise<void>;
 type OnUsage = (event: UsageEvent) => void | Promise<void>;
 
 /**
@@ -89,6 +89,7 @@ export async function generateResponse({
   messages,
   mode = "act",
   thinking = false,
+  context,
   onFinish,
   onUsage,
 }: {
@@ -96,10 +97,13 @@ export async function generateResponse({
   messages: ModelMessage[];
   mode?: AgentMode;
   thinking?: boolean;
+  /** The study's hypothesis and results, appended to the system prompt. */
+  context?: string;
   onFinish?: OnFinish;
   onUsage?: OnUsage;
 }): Promise<Response> {
-  const system = mode === "plan" ? PLAN_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const base = mode === "plan" ? PLAN_SYSTEM_PROMPT : SYSTEM_PROMPT;
+  const system = context ? `${base}\n\n${context}` : base;
   // Every model on offer reports support for reasoning tokens; asking for
   // them is what the thinking toggle actually does.
   const providerOptions = thinking
@@ -129,6 +133,15 @@ export async function generateResponse({
     execute: async ({ writer }) => {
       const status = (data: AgentStatus) =>
         writer.write({ type: "data-status", data, transient: true });
+
+      // Minted up front and sent as the stream's own message id, so the
+      // UIMessage the client ends up holding carries the same id as the
+      // row onFinish is about to insert — without this, the client and
+      // the database would each pick their own random id for the same
+      // message, and voting on a reply before the next reload would look
+      // up a message id that does not exist yet.
+      const messageId = randomUUID();
+      writer.write({ type: "start", messageId });
 
       status({ phase: "drafting", model: modelId });
 
@@ -182,16 +195,16 @@ export async function generateResponse({
         }
       }
 
-      await onFinish?.({ text: finalText });
+      await onFinish?.({ text: finalText, id: messageId });
 
       status({ phase: "writing" });
-      const id = randomUUID();
-      writer.write({ type: "text-start", id });
+      const textPartId = randomUUID();
+      writer.write({ type: "text-start", id: textPartId });
       for (const part of toChunks(finalText, STREAM_CHUNK_SIZE)) {
-        writer.write({ type: "text-delta", id, delta: part });
+        writer.write({ type: "text-delta", id: textPartId, delta: part });
         await sleep(STREAM_CHUNK_DELAY_MS);
       }
-      writer.write({ type: "text-end", id });
+      writer.write({ type: "text-end", id: textPartId });
       status({ phase: "done" });
     },
   });

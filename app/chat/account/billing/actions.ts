@@ -8,14 +8,16 @@ import { getSiteUrl } from "@/lib/site-url";
 
 /**
  * Starts a Stripe Checkout session for the paid plan and redirects to it.
- * Reachable while still unapproved (on the waitlist) — paying is itself a
- * way in, not a plan upgrade reserved for people already let past the
- * waitlist. Only an actual signed-in session is required.
+ * Requires an actual approved account — a suspended account (isApproved
+ * false, an admin kill-switch, not a queue) cannot pay its way back in.
  */
 export async function startCheckoutAction() {
   const gate = await getApprovedUser();
   if (gate.status === "unauthenticated") {
     redirect("/login");
+  }
+  if (gate.status !== "approved") {
+    throw new Error("Not authorized.");
   }
 
   const url = await createCheckoutSession(db, gate.user.id, gate.user.email, getSiteUrl());

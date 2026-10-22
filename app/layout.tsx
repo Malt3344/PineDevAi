@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -15,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PineDev — Pine Script v6, written by an agent",
+  title: "PineDev — validate trading strategies the way quants do",
   description:
-    "Describe your trading strategy in plain language. PineDev writes and fixes TradingView Pine Script v6 for you.",
+    "A research protocol for retail traders: pre-register a hypothesis, build it in Pine v6, then put it through deflated Sharpe, Monte Carlo, cost stress and a one-shot out-of-sample test before risking money.",
 };
 
 export default function RootLayout({
@@ -31,10 +32,12 @@ export default function RootLayout({
       className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TooltipProvider delayDuration={200}>
-          {children}
-          <Toaster theme="dark" position="bottom-right" />
-        </TooltipProvider>
+        <SessionProvider>
+          <TooltipProvider delayDuration={200}>
+            {children}
+            <Toaster theme="dark" position="bottom-right" />
+          </TooltipProvider>
+        </SessionProvider>
       </body>
     </html>
   );
