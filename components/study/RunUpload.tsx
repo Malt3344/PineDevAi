@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { FileSpreadsheet, TriangleAlert, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { uploadRun } from "@/app/chat/study-actions";
+import { uploadRun } from "@/app/(app)/studies/actions";
 import {
   AlertDialog,
   AlertDialogAction,

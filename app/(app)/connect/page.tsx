@@ -34,7 +34,7 @@ function Step({ n, children }: { n: number; children: React.ReactNode }) {
  */
 export default async function ConnectPage() {
   const gate = await getApprovedUser();
-  if (gate.status !== "approved") redirect("/login?callbackUrl=/chat/connect");
+  if (gate.status !== "approved") redirect("/login?callbackUrl=/connect");
 
   const connections = await listConnections(db, gate.user.id);
   const url = mcpResourceUrl();

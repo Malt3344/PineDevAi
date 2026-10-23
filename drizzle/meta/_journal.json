@@ -29,6 +29,13 @@
       "when": 1792690858851,
       "tag": "0003_claude_connect",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792754925945,
+      "tag": "0004_study_script",
+      "breakpoints": true
     }
   ]
 }

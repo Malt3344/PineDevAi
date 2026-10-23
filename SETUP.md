@@ -14,10 +14,13 @@ Any Postgres works. Supabase's free tier is a convenient option if you don't alr
 
 ## 2. Run the migration
 
-1. Copy everything from [drizzle/0000_true_bruce_banner.sql](drizzle/0000_true_bruce_banner.sql) in this repo and run it against your database — via your Postgres provider's SQL editor (e.g. Supabase's **SQL Editor** → **New query**), or with `psql "$DATABASE_URL" -f drizzle/0000_true_bruce_banner.sql`.
-2. This creates every table: `user`, `account`, `session`, `verificationToken` (Auth.js), `waitlist`, `chat`, `message`, `vote`, `document`, `usage_event`.
+Once `DATABASE_URL` is set (step 3), run every migration in `drizzle/` from your machine:
 
-(Alternative: once `DATABASE_URL` is set in step 3, you can instead run `npm run db:migrate` from your machine.)
+```bash
+npm run db:migrate
+```
+
+Run it again whenever a new file appears in `drizzle/`. Skipping one leaves the app failing with server errors as soon as a page touches the missing table.
 
 ## 3. Fill in `.env.local`
 
@@ -31,10 +34,9 @@ Any Postgres works. Supabase's free tier is a convenient option if you don't alr
    ```
    Anyone with this value can forge session tokens, so use a different one in production than in local dev.
 3. Put your Postgres connection string (from step 1) in `DATABASE_URL`.
-4. Get an Anthropic API key from [console.anthropic.com](https://console.anthropic.com) → **API Keys** and put it in `ANTHROPIC_API_KEY`.
-5. Get an OpenRouter API key from [openrouter.ai/keys](https://openrouter.ai/keys) and put it in `OPENROUTER_API_KEY` — required, since the default model and most of the model roster run through OpenRouter.
-6. Leave `NEXT_PUBLIC_SITE_URL` as `http://localhost:3000` for local development.
-7. Leave `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and the `STRIPE_*` variables blank for now if you don't want Google sign-in or billing yet — the app runs fine without them; the Google button on `/login` and the "Upgrade" button on the Billing page just stay disabled.
+4. No AI key is needed: users bring their own Claude.
+5. Leave `NEXT_PUBLIC_SITE_URL` as `http://localhost:3000` for local development.
+6. Leave `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and the `STRIPE_*` variables blank for now if you don't want Google sign-in or billing yet — the app runs fine without them; the Google button on `/login` and the "Upgrade" button on the Billing page just stay disabled.
 
 ## 4. Enable Google sign-in (optional)
 
@@ -82,7 +84,7 @@ There is no self-serve approval flow — every account is approved by hand (unle
 1. Open your Postgres provider's table editor (e.g. Supabase's **Table Editor**) and find the `user` table.
 2. Find the row matching the user's email.
 3. Click the `isApproved` cell and change it from `false` to `true`.
-4. Save. The user can now refresh `/chat` and use the product — no restart or redeploy needed (approval is checked fresh on every request).
+4. Save. The user can now refresh `/studies` and use the product — no restart or redeploy needed (approval is checked fresh on every request).
 
 To see everyone who joined the public Pro-tier waitlist (from the landing page form, separate from real accounts), check the `waitlist` table the same way.
 

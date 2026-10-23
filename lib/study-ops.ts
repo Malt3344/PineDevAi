@@ -1,9 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { db as Db } from "@/lib/db/client";
-import { chats, messages, protocols, tradeRuns } from "@/lib/db/schema";
-import { DEFAULT_AGENT_MODEL_ID } from "@/lib/agent/models";
-import { saveDocument } from "@/lib/documents";
+import { chats, protocols, tradeRuns } from "@/lib/db/schema";
 import {
   RUN_STAGES,
   criteriaSchema,
@@ -43,7 +41,8 @@ export async function createStudy(db: Database, userId: string, title?: string) 
     .values({
       userId,
       title: title?.trim().slice(0, 200) || "New study",
-      modelId: DEFAULT_AGENT_MODEL_ID,
+      // The column predates the connected-Claude flow; it no longer selects anything.
+      modelId: "claude",
     })
     .returning({ id: chats.id, title: chats.title });
   await getOrCreateProtocol(db, row.id, userId);
@@ -210,34 +209,18 @@ export async function removeRun(db: Database, userId: string, chatId: string, ru
 
 export const MAX_SCRIPT_LENGTH = 100_000;
 
-/**
- * Attaches a Pine script written in the user's own Claude to the study. It
- * lands in the study's conversation as a clearly labelled message — that is
- * where the Script tab and the Build stage already read the current script
- * from — and in the script library as a document.
- */
-export async function attachScript(
-  db: Database,
-  userId: string,
-  chatId: string,
-  code: string,
-  note?: string,
-): Promise<OpResult> {
+/** Stores the study's current Pine script, as written in the user's own Claude. */
+export async function attachScript(db: Database, userId: string, chatId: string, code: string): Promise<OpResult> {
   if (!(await ownsStudy(db, userId, chatId))) return { ok: false, error: "Study not found." };
   const trimmed = code.trim();
   if (!trimmed) return { ok: false, error: "The script is empty." };
   if (trimmed.length > MAX_SCRIPT_LENGTH) return { ok: false, error: "That script is too long." };
 
-  const intro = note?.trim() ? `${note.trim().slice(0, 2000)}\n\n` : "";
-  await db.insert(messages).values({
-    chatId,
-    userId,
-    role: "assistant",
-    parts: [{ type: "text", text: `**Script saved from your connected Claude.**\n\n${intro}\`\`\`pine\n${trimmed}\n\`\`\`` }],
-  });
-
-  const firstLine = trimmed.match(/strategy\s*\(\s*"([^"]+)"/)?.[1] ?? "Strategy from Claude";
-  await saveDocument(db, { userId, title: firstLine, code: trimmed, chatId });
+  await getOrCreateProtocol(db, chatId, userId);
+  await db
+    .update(protocols)
+    .set({ script: trimmed, scriptUpdatedAt: new Date(), updatedAt: new Date() })
+    .where(eq(protocols.chatId, chatId));
   await refreshSummary(db, chatId, userId);
   return { ok: true };
 }

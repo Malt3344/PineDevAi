@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Lock, LockOpen, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { amendHypothesis, lockHypothesis, saveHypothesis } from "@/app/chat/study-actions";
+import { amendHypothesis, lockHypothesis, saveHypothesis } from "@/app/(app)/studies/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,7 +71,7 @@ export function HypothesisStage({
 }: {
   chatId: string;
   protocol: ProtocolInput;
-  onAsk: (text: string, mode?: "plan" | "act") => void;
+  onAsk: (text: string) => void;
 }) {
   const [hypothesis, setHypothesis] = useState(protocol.hypothesis);
   const [criteria, setCriteria] = useState(protocol.criteria);
@@ -137,8 +137,8 @@ export function HypothesisStage({
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border px-4 py-3">
           <p className="text-sm text-muted-foreground">
-            Not sure how to phrase it? Describe the idea in the chat and the assistant will draft a
-            testable hypothesis.
+            Easiest: let Claude interview you and fill this in. Copy the prompt, paste it into your
+            connected Claude.
           </p>
           <Button
             variant="outline"
@@ -146,12 +146,11 @@ export function HypothesisStage({
             onClick={() =>
               onAsk(
                 `Help me turn this into a testable hypothesis for the protocol. Market: ${hypothesis.market || "?"}, timeframe: ${hypothesis.timeframe || "?"}. Idea: ${hypothesis.rationale || hypothesis.entryRules || "(I'll describe it next)"}`,
-                "plan",
               )
             }
           >
             <Sparkles />
-            Draft with the assistant
+            Copy prompt for Claude
           </Button>
         </div>
       )}

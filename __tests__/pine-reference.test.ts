@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { PINE_V6_API } from "@/lib/agent/pine-reference";
-import { SYSTEM_PROMPT } from "@/lib/agent/system-prompt";
+import { readFileSync } from "node:fs";
+import { PINE_V6_API } from "@/lib/pine-reference";
 
 describe("PINE_V6_API", () => {
   it("carries the built-in signatures the models get wrong on their own", () => {
     // Each of these was invented or misused by a free model before the
-    // reference was added — see the gotchas block in the system prompt.
+    // reference was added — see the gotchas in the plugin's Pine skill.
     expect(PINE_V6_API).toContain("str.tonumber(string)");
     expect(PINE_V6_API).toContain("str.split(string, separator)");
     expect(PINE_V6_API).toContain("strategy.position_avg_price");
@@ -27,20 +27,17 @@ describe("PINE_V6_API", () => {
   });
 });
 
-describe("SYSTEM_PROMPT", () => {
-  it("embeds the reference, so the model is grounded rather than recalling", () => {
-    expect(SYSTEM_PROMPT).toContain(PINE_V6_API);
-  });
+describe("the Claude plugin's Pine skill", () => {
+  const skill = readFileSync("claude-plugin/plugins/pinedev/skills/pine-v6-strategy/SKILL.md", "utf8");
+  const reference = readFileSync("claude-plugin/plugins/pinedev/skills/pine-v6-strategy/reference.md", "utf8");
 
-  it("keeps the instructions ahead of the reference dump", () => {
-    expect(SYSTEM_PROMPT.indexOf("//@version=6")).toBeLessThan(
-      SYSTEM_PROMPT.indexOf(PINE_V6_API),
-    );
+  it("ships the same reference the MCP server searches (run npm run plugin:build if this fails)", () => {
+    expect(reference).toContain(PINE_V6_API.trim());
   });
 
   it("states the observed gotchas explicitly, not just implicitly via signatures", () => {
-    expect(SYSTEM_PROMPT).toContain("not na(time(timeframe.period, sess))");
-    expect(SYSTEM_PROMPT).toContain("There is no strategy.position_price");
-    expect(SYSTEM_PROMPT).toContain("Pine has no methods on values");
+    expect(skill).toContain("not na(time(timeframe.period, sess))");
+    expect(skill).toContain("There is no `strategy.position_price`");
+    expect(skill).toContain("Pine has no methods on numbers or strings");
   });
 });

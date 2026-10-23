@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const layout = fs.readFileSync(
-  path.resolve(__dirname, "../app/chat/layout.tsx"),
+  path.resolve(__dirname, "../app/(app)/layout.tsx"),
   "utf8",
 );
 
@@ -12,7 +12,7 @@ const layout = fs.readFileSync(
  * were each a real bug once, and that the block's own pieces are actually
  * used rather than reimplemented beside it.
  */
-describe("chat shell layout", () => {
+describe("app shell layout", () => {
   it("uses shadcn's sidebar provider and inset rather than hand-rolled chrome", () => {
     expect(layout).toMatch(/<SidebarProvider/);
     expect(layout).toMatch(/<SidebarInset/);

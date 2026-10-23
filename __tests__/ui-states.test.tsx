@@ -5,7 +5,6 @@ import { FileCode } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
-import { AgentStatusLine } from "@/components/AgentStatusLine";
 
 describe("EmptyState", () => {
   it("says what it is, why it is empty, and what to do", () => {
@@ -54,35 +53,5 @@ describe("Skeleton", () => {
     const nodes = container.querySelectorAll('[data-slot="skeleton"]');
     expect(nodes).toHaveLength(2);
     for (const node of nodes) expect(node).toHaveAttribute("aria-hidden", "true");
-  });
-});
-
-describe("AgentStatusLine", () => {
-  it("announces politely, so a screen reader is told without being interrupted", () => {
-    render(<AgentStatusLine status={{ phase: "drafting" }} />);
-    const status = screen.getByRole("status");
-    expect(status).toHaveAttribute("aria-live", "polite");
-  });
-
-  it("names each real stage", () => {
-    const { rerender } = render(<AgentStatusLine status={{ phase: "drafting" }} />);
-    expect(screen.getByText(/writing the script/i)).toBeInTheDocument();
-
-    rerender(<AgentStatusLine status={{ phase: "reviewing" }} />);
-    expect(screen.getByText(/pine v6 rules/i)).toBeInTheDocument();
-  });
-
-  it("surfaces a fallback as a warning with the reason, not a silent retry", () => {
-    render(
-      <AgentStatusLine
-        status={{ phase: "retrying", detail: "nemotron-ultra was unavailable" }}
-      />,
-    );
-    expect(screen.getByText(/nemotron-ultra was unavailable/i)).toBeInTheDocument();
-  });
-
-  it("still says something before the first status arrives", () => {
-    render(<AgentStatusLine status={null} />);
-    expect(screen.getByText(/thinking/i)).toBeInTheDocument();
   });
 });

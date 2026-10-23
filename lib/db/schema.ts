@@ -247,6 +247,10 @@ export const protocols = pgTable("protocol", {
   // Times out-of-sample data was uploaded. Deleting the run does not
   // decrement it — once held-out data has been seen, it has been seen.
   oosAttempts: integer("oosAttempts").notNull().default(0),
+  // The study's current Pine v6 strategy, as last saved by the user's
+  // connected Claude (save_script).
+  script: text("script"),
+  scriptUpdatedAt: timestamp("scriptUpdatedAt", { mode: "date" }),
   // Denormalised snapshot for the research desk list, refreshed whenever a
   // run or the protocol changes, so listing studies needs no Monte Carlo.
   summary: jsonb("summary").$type<StudySummary>(),

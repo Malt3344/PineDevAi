@@ -254,16 +254,15 @@ function LoginForm() {
               </Link>
               <div>
                 <p className="text-xl font-semibold tracking-tight text-balance">
-                  Describe your strategy. Get working Pine Script v6.
+                  Validate your strategy like a quant.
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  An agent that writes and fixes TradingView Pine Script, checks
-                  it against the v6 rules, and hands you something you can paste
-                  straight into the editor.
+                  Connect your Claude, describe your idea, and get an honest,
+                  professional verdict on your TradingView strategy.
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Paste a compiler error and get the corrected script back.
+                Works with Claude Pro and Max — desktop app, claude.ai or Claude Code.
               </p>
             </div>
           </CardContent>

@@ -11,7 +11,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteRun } from "@/app/chat/study-actions";
+import { deleteRun } from "@/app/(app)/studies/actions";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,20 +23,20 @@ import { DrawdownHistogram, EquityChart, FanChart, PeriodBars } from "./charts";
 import { formatDate, formatMoney, formatPct, formatRatio } from "./format";
 import { CheckList, GradeBadge, Section, StageIntro, Stat, StatGrid } from "./primitives";
 import { RunUpload } from "./RunUpload";
+import { ScriptBlock } from "./ScriptBlock";
 
-type Ask = (text: string, mode?: "plan" | "act") => void;
+/** Copies a prompt for the user's own Claude, which is where the work happens. */
+type Ask = (text: string) => void;
 
 /** Stage 2: the script, linted for the ways a backtest can flatter itself. */
 export function BuildStage({
   code,
   protocol,
   onAsk,
-  onOpenScript,
 }: {
   code: string | null;
   protocol: ProtocolInput;
   onAsk: Ask;
-  onOpenScript: () => void;
 }) {
   const h = protocol.hypothesis;
   const lint = code ? lintPineScript(code) : [];
@@ -54,8 +54,8 @@ export function BuildStage({
           <EmptyState
             className="py-6"
             icon={FileCode}
-            title="Have the assistant build it from the hypothesis"
-            description="It writes the rules you locked, with the protocol scaffold built in. You can edit the result in the Script tab."
+            title="Ask Claude to write it"
+            description="Claude writes exactly the rules you locked, with costs, a date window and no lookahead, and saves the script here."
             action={
               <Button
                 onClick={() =>
@@ -65,7 +65,7 @@ export function BuildStage({
                 }
               >
                 <Sparkles />
-                Write the strategy
+                Copy prompt for Claude
               </Button>
             }
           />
@@ -74,12 +74,6 @@ export function BuildStage({
         <Section
           title="Backtest hygiene"
           description="Static checks on the current script. They read the code; nothing is executed."
-          action={
-            <Button variant="outline" size="sm" onClick={onOpenScript}>
-              <FileCode />
-              Open script
-            </Button>
-          }
         >
           <ul className="divide-y divide-border">
             {lint.map((item) => (
@@ -109,9 +103,15 @@ export function BuildStage({
               }
             >
               <Sparkles />
-              Ask the assistant to fix {failures.length === 1 ? "it" : `all ${failures.length}`}
+              Copy fix prompt for Claude
             </Button>
           )}
+        </Section>
+      )}
+
+      {code && (
+        <Section title="Strategy script">
+          <ScriptBlock code={code} />
         </Section>
       )}
 
@@ -124,7 +124,7 @@ export function BuildStage({
             <span className="text-foreground">Window end</span> to{" "}
             <span className="font-mono text-foreground">{h.inSampleEnd || "—"}</span>.
           </li>
-          <li>Strategy Tester → List of trades → Export, then upload the file in the next stage.</li>
+          <li>Strategy Tester → List of trades → Export, then give the file to Claude (or drop it in the next stage).</li>
           <li>Do not touch the out-of-sample dates yet.</li>
         </ol>
       </Section>
@@ -403,7 +403,7 @@ export function RobustnessStage({
                 }
               >
                 <MessageSquareText />
-                Explain these
+                Ask Claude to explain
               </Button>
             }
           >
@@ -581,7 +581,7 @@ export function VerdictStage({ analysis, onAsk }: { analysis: StudyAnalysis; onA
           }
         >
           <MessageSquareText />
-          Discuss the verdict
+          Ask Claude about the verdict
         </Button>
       )}
     </div>

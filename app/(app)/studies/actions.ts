@@ -28,8 +28,8 @@ async function userId(): Promise<string | null> {
 
 function done(result: OpResult, chatId: string, layout = false): ActionResult {
   if (!result.ok) return result;
-  revalidatePath(`/chat/${chatId}`);
-  if (layout) revalidatePath("/chat", "layout");
+  revalidatePath(`/studies/${chatId}`);
+  if (layout) revalidatePath("/studies", "layout");
   return { ok: true };
 }
 

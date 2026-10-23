@@ -39,7 +39,7 @@ export default function GlobalError({
       <div className="mt-6 flex gap-3">
         <Button onClick={reset}>Try again</Button>
         <Button variant="outline" asChild>
-<Link href="/chat">Back to your strategies</Link>
+<Link href="/studies">Back to your studies</Link>
 </Button>
       </div>
     </main>

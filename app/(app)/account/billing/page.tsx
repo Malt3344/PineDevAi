@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
-import { PAID_DAILY_MESSAGE_CAP, DAILY_MESSAGE_CAP } from "@/lib/daily-cap";
+import { PLAN } from "@/lib/pricing";
 import { startCheckoutAction, openBillingPortalAction } from "./actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 
 const STATUS_LABEL: Record<string, string> = {
   free: "Free",
-  active: "Pro — active",
-  past_due: "Pro — payment past due",
-  canceled: "Pro — canceled",
+  active: "Active",
+  past_due: "Payment past due",
+  canceled: "Canceled",
 };
 
 /**
@@ -41,8 +41,7 @@ export default async function BillingPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Free plan: {DAILY_MESSAGE_CAP} messages a day. Pro:{" "}
-            {PAID_DAILY_MESSAGE_CAP} messages a day.
+            {PLAN.name} — ${PLAN.price}/month. Cancel any time.
           </p>
 
           {isPaid ? (
@@ -54,7 +53,7 @@ export default async function BillingPage() {
           ) : (
             <form action={startCheckoutAction} className="mt-4">
               <Button type="submit" disabled={!billingConfigured}>
-                {billingConfigured ? "Upgrade to Pro" : "Billing not configured yet"}
+                {billingConfigured ? "Subscribe" : "Billing not configured yet"}
               </Button>
             </form>
           )}

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { db as Db } from "@/lib/db/client";
-import { PINE_V6_API } from "@/lib/agent/pine-reference";
+import { PINE_V6_API } from "@/lib/pine-reference";
 import { createUploadToken } from "@/lib/oauth";
 import { lintPineScript } from "@/lib/quant/pine-lint";
 import { RUN_STAGES, type Criteria, type Hypothesis } from "@/lib/quant/protocol";
@@ -51,7 +51,7 @@ const text = (t: string, structuredContent?: Record<string, unknown>): ToolResul
 });
 const fail = (t: string): ToolResult => ({ content: [{ type: "text", text: t }], isError: true });
 
-const studyUrl = (ctx: ToolContext, id: string) => `${ctx.siteUrl}/chat/${id}`;
+const studyUrl = (ctx: ToolContext, id: string) => `${ctx.siteUrl}/studies/${id}`;
 
 const STUDY_ID = { type: "string", description: "The study's id (from list_studies or create_study)." };
 
@@ -280,13 +280,12 @@ export const TOOLS: Tool[] = [
     name: "save_script",
     title: "Save script to study",
     description:
-      "Attach the final Pine Script v6 strategy to the study (it appears in the study's Script tab and the user's script library). Returns the lint results. Save the complete script, not a fragment.",
+      "Attach the final Pine Script v6 strategy to the study, replacing any earlier version (the user sees it in PineDev with a copy button). Returns the lint results. Save the complete script, not a fragment.",
     inputSchema: {
       type: "object",
       properties: {
         study_id: STUDY_ID,
         code: { type: "string", description: "The complete Pine Script v6 source." },
-        note: { type: "string", description: "Optional one-paragraph note shown above the script." },
       },
       required: ["study_id", "code"],
       additionalProperties: false,
@@ -294,12 +293,12 @@ export const TOOLS: Tool[] = [
     annotations: {},
     async run(args, ctx) {
       const parsed = z
-        .object({ study_id: z.string(), code: z.string(), note: z.string().max(2000).optional() })
+        .object({ study_id: z.string(), code: z.string() })
         .safeParse(args);
       if (!parsed.success) return fail("Pass study_id and the full script as `code`.");
       const id = await requireStudy(ctx, parsed.data.study_id);
       if (!id) return fail("Study not found.");
-      const result = await attachScript(ctx.db, ctx.userId, id, parsed.data.code, parsed.data.note);
+      const result = await attachScript(ctx.db, ctx.userId, id, parsed.data.code);
       if (!result.ok) return fail(result.error);
       const lint = lintPineScript(parsed.data.code);
       const problems = lint.filter((l) => l.status !== "pass");

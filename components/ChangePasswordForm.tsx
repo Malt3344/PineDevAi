@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { changePasswordAction } from "@/app/chat/account/actions";
+import { changePasswordAction } from "@/app/(app)/account/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";

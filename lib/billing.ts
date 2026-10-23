@@ -48,8 +48,8 @@ export async function createCheckoutSession(
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: PAID_PLAN_PRICE_ID, quantity: 1 }],
-    success_url: `${siteUrl}/chat/account/billing?checkout=success`,
-    cancel_url: `${siteUrl}/chat/account/billing?checkout=canceled`,
+    success_url: `${siteUrl}/account/billing?checkout=success`,
+    cancel_url: `${siteUrl}/account/billing?checkout=canceled`,
     client_reference_id: userId,
   });
 
@@ -71,7 +71,7 @@ export async function createPortalSession(
 
   const session = await getStripeClient().billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${siteUrl}/chat/account/billing`,
+    return_url: `${siteUrl}/account/billing`,
   });
 
   return session.url;

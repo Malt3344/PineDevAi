@@ -4,11 +4,11 @@ import { useEffect } from "react";
 import { ErrorState } from "@/components/ui/error-state";
 
 /**
- * Failure boundary for everything under /chat. Renders inside the app
+ * Failure boundary for everything in the app. Renders inside the app
  * shell, so the sidebar and navigation survive — the user keeps their
  * place instead of being dropped onto a blank framework page.
  */
-export default function ChatError({
+export default function AppError({
   error,
   reset,
 }: {
@@ -16,14 +16,14 @@ export default function ChatError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Chat area failed", error);
+    console.error("App page failed", error);
   }, [error]);
 
   return (
     <main className="flex flex-1 items-center justify-center">
       <ErrorState
         title="This page failed to load"
-        description="The rest of the app is still working — try again, or pick another conversation."
+        description="The rest of the app is still working — try again, or open another study."
         reason={error.message}
         onRetry={reset}
       />

@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, User, Activity } from "lucide-react";
+import { CreditCard, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACCOUNT_NAV_ITEMS = [
-  { href: "/chat/account", label: "Profile", icon: User },
-  { href: "/chat/account/usage", label: "Usage", icon: Activity },
-  { href: "/chat/account/billing", label: "Billing", icon: CreditCard },
+  { href: "/account", label: "Profile", icon: User },
+  { href: "/account/billing", label: "Billing", icon: CreditCard },
 ];
 
-/** Sub-navigation for the account settings area: Profile, Usage, Billing. */
+/** Sub-navigation for the account settings area: Profile, Billing. */
 export function AccountNav() {
   const pathname = usePathname();
 

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { AccountNav } from "@/components/AccountNav";
 
-/** Shared shell for the account settings area (Profile, Usage, Billing). */
+/** Shared shell for the account settings area (Profile, Billing). */
 export default async function AccountLayout({
   children,
 }: {
@@ -15,7 +15,7 @@ export default async function AccountLayout({
   }
 
   if (gate.status === "unapproved") {
-    redirect("/chat");
+    redirect("/studies");
   }
 
   return (

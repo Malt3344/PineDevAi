@@ -25,7 +25,7 @@ export async function answerConsent(formData: FormData) {
 
   const client = await getClient(db, clientId);
   if (!client || !client.redirectUris.includes(redirectUri) || !codeChallenge) {
-    redirect("/chat/connect?error=invalid_request");
+    redirect("/connect?error=invalid_request");
   }
 
   if (decision !== "allow") {

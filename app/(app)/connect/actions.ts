@@ -12,5 +12,5 @@ export async function disconnectAction(formData: FormData) {
   const clientId = String(formData.get("client_id") ?? "");
   if (!clientId) return;
   await disconnectClient(db, gate.user.id, clientId);
-  revalidatePath("/chat/connect");
+  revalidatePath("/connect");
 }

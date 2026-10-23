@@ -1,5 +1,5 @@
 // Regenerates the generated parts of the Claude Code plugin in claude-plugin/:
-//   - skills/pine-v6-strategy/reference.md, from lib/agent/pine-reference.ts,
+//   - skills/pine-v6-strategy/reference.md, from lib/pine-reference.ts,
 //     so the plugin and the in-app assistant share one Pine v6 reference
 //   - .mcp.json, pointing at the PineDev deployment users connect to
 //
@@ -13,9 +13,9 @@ const plugin = new URL("claude-plugin/plugins/pinedev/", root);
 const site = (process.env.PINEDEV_URL ?? "https://www.pine-dev.com").replace(/\/$/, "");
 new URL(site); // throws on a malformed URL rather than shipping one
 
-const source = readFileSync(new URL("lib/agent/pine-reference.ts", root), "utf8");
+const source = readFileSync(new URL("lib/pine-reference.ts", root), "utf8");
 const match = /export const PINE_V6_API = `([\s\S]*?)`;/.exec(source);
-if (!match) throw new Error("Could not find PINE_V6_API in lib/agent/pine-reference.ts");
+if (!match) throw new Error("Could not find PINE_V6_API in lib/pine-reference.ts");
 
 writeFileSync(
   new URL("skills/pine-v6-strategy/reference.md", plugin),

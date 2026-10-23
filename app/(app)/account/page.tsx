@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
-import { signOutAction } from "@/app/chat/actions";
+import { signOutAction } from "@/app/(app)/actions";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

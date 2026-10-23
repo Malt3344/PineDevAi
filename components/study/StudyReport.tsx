@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
+import { toast } from "sonner";
 import type { ProtocolInput, StudyAnalysis } from "@/lib/quant/analysis";
 import { STAGES, type StageId } from "@/lib/quant/protocol";
 import { cn } from "@/lib/utils";
@@ -19,24 +20,30 @@ import {
 export type StudyData = { protocol: ProtocolInput; analysis: StudyAnalysis };
 
 /**
- * The study's protocol, one stage at a time. The stepper shows where the
- * study actually is (derived from the evidence, not a flag the user sets)
- * while still letting them look back at any earlier stage.
+ * One study, as a report: where it is in the protocol (derived from the
+ * evidence, not a flag the user sets), every result so far, and the
+ * verdict. The work itself happens in the user's own Claude; the buttons
+ * that would have asked an assistant copy a prompt for Claude instead,
+ * tagged with this study's id so Claude opens the right one.
  */
-export function ProtocolPanel({
+export function StudyReport({
   chatId,
+  title,
   study,
   code,
-  onAsk,
-  onOpenScript,
 }: {
   chatId: string;
+  title: string;
   study: StudyData;
   code: string | null;
-  onAsk: (text: string, mode?: "plan" | "act") => void;
-  onOpenScript: () => void;
 }) {
   const { protocol, analysis } = study;
+  const h = protocol.hypothesis;
+
+  async function onAsk(text: string) {
+    await navigator.clipboard.writeText(`${text}\n\n(PineDev study_id: ${chatId})`);
+    toast.success("Prompt copied — paste it into Claude.");
+  }
   const [active, setActive] = useState<StageId>(analysis.current);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -62,11 +69,20 @@ export function ProtocolPanel({
   const index = STAGES.findIndex((s) => s.id === active);
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col bg-background">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pt-5 pb-3 sm:px-6">
+        <div className="min-w-0">
+          <h1 className="truncate text-lg font-semibold tracking-tight">{title || "New study"}</h1>
+          <p className="text-sm text-muted-foreground">
+            {[h.market, h.timeframe].filter(Boolean).join(" · ") || "Hypothesis not written yet"}
+          </p>
+        </div>
+        <GradeBadge grade={analysis.verdict.grade} className="text-sm" />
+      </header>
       <nav
         ref={navRef}
         aria-label="Protocol stages"
-        className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-surface-raised px-2 [scrollbar-width:none]"
+        className="flex h-12 shrink-0 items-center gap-1 overflow-x-auto border-y border-border px-3 [scrollbar-width:none] sm:px-5"
       >
         {STAGES.map((stage, i) => {
           const state = analysis.stageStates[stage.id];
@@ -97,16 +113,13 @@ export function ProtocolPanel({
             </button>
           );
         })}
-        <div className="ml-auto hidden shrink-0 pl-2 xl:block">
-          <GradeBadge grade={analysis.verdict.grade} />
-        </div>
       </nav>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
           {active === "hypothesis" && <HypothesisStage chatId={chatId} protocol={protocol} onAsk={onAsk} />}
           {active === "build" && (
-            <BuildStage code={code} protocol={protocol} onAsk={onAsk} onOpenScript={onOpenScript} />
+            <BuildStage code={code} protocol={protocol} onAsk={onAsk} />
           )}
           {active === "in_sample" && <InSampleStage chatId={chatId} protocol={protocol} analysis={analysis} />}
           {active === "robustness" && <RobustnessStage protocol={protocol} analysis={analysis} onAsk={onAsk} />}

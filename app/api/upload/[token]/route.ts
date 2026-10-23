@@ -42,7 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const { protocol, analysis } = await loadStudy(db, claim.chatId, claim.userId);
   const title = (await listStudies(db, claim.userId)).find((s) => s.id === claim.chatId)?.title ?? "Study";
   const report = formatStudy(
-    { id: claim.chatId, title, url: `${getSiteUrl()}/chat/${claim.chatId}` },
+    { id: claim.chatId, title, url: `${getSiteUrl()}/studies/${claim.chatId}` },
     protocol,
     analysis,
     "full",

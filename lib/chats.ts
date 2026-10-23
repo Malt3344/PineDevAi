@@ -1,31 +1,6 @@
-import { count, eq } from "drizzle-orm";
-import type { db as Db } from "@/lib/db/client";
-import { chats, messages } from "@/lib/db/schema";
-
-const TITLE_LENGTH = 50;
-
 /**
- * If this chat has no messages yet, sets its title from the first 50
- * characters of the user's first message. No LLM call involved.
+ * Sidebar grouping for the user's studies, most recent first.
  */
-export async function setInitialTitleIfEmpty(
-  db: typeof Db,
-  chatId: string,
-  firstMessageContent: string,
-) {
-  const [row] = await db
-    .select({ value: count() })
-    .from(messages)
-    .where(eq(messages.chatId, chatId));
-
-  if ((row?.value ?? 0) > 0) return;
-
-  await db
-    .update(chats)
-    .set({ title: firstMessageContent.slice(0, TITLE_LENGTH) })
-    .where(eq(chats.id, chatId));
-}
-
 export type ChatGroupLabel = "Today" | "Yesterday" | "Last 7 days" | "Last 30 days" | "Older";
 
 export const CHAT_GROUP_ORDER: ChatGroupLabel[] = [

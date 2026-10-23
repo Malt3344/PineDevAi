@@ -3,22 +3,21 @@ import { redirect } from "next/navigation";
 import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { chats } from "@/lib/db/schema";
-import { CommandPalette } from "@/components/CommandPalette";
-import { ConversationSidebar } from "@/components/ConversationSidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { signOutAction } from "@/app/chat/actions";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { signOutAction } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
 
 const SUPPORT_EMAIL = "hello@pinedev.app";
 
-export default async function ChatLayout({
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   // Middleware already redirects unauthenticated visitors, but that is a
   // UX convenience only — this server-side check is the real gate, run on
-  // every request to anything under /chat.
+  // every request to anything in the app.
   const gate = await getApprovedUser();
 
   if (gate.status === "unauthenticated") {
@@ -53,13 +52,8 @@ export default async function ChatLayout({
     );
   }
 
-  const userChats = await db
-    .select({
-      id: chats.id,
-      title: chats.title,
-      createdAt: chats.createdAt,
-      visibility: chats.visibility,
-    })
+  const studies = await db
+    .select({ id: chats.id, title: chats.title, createdAt: chats.createdAt })
     .from(chats)
     .where(eq(chats.userId, gate.user.id))
     .orderBy(desc(chats.createdAt));
@@ -69,17 +63,20 @@ export default async function ChatLayout({
   // the ⌘B shortcut. SidebarInset is the content pane beside it.
   //
   // h-dvh, not vh: on iOS Safari 100vh is the height the page would have if
-  // the browser chrome were hidden, which puts the composer behind it. The
-  // window itself never scrolls — every pane scrolls inside itself, the way
-  // an editor does.
+  // the browser chrome were hidden. The window itself never scrolls; the
+  // content pane scrolls inside itself.
   return (
     <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
-      <CommandPalette conversations={userChats} />
-      <ConversationSidebar conversations={userChats} userEmail={gate.user.email} />
+      <AppSidebar studies={studies} userEmail={gate.user.email} />
       {/* min-h-0: a flex item defaults to min-height:auto and would refuse
           to shrink below its content, growing past the shell instead of
           letting the panes scroll inside themselves. */}
       <SidebarInset className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Phones only: the rail is a sheet there, and this opens it. */}
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 md:hidden">
+          <SidebarTrigger />
+          <span className="text-sm font-semibold tracking-tight">PineDev</span>
+        </div>
         {children}
       </SidebarInset>
     </SidebarProvider>

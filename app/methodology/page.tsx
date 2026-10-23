@@ -216,13 +216,13 @@ export default function MethodologyPage() {
 
           <div className="mt-14 flex flex-wrap gap-3">
             <Button asChild>
-              <Link href="/login?mode=sign-up">
-                Start a study
+              <Link href={`/login?mode=sign-up&callbackUrl=${encodeURIComponent("/connect")}`}>
+                Connect Claude
                 <ArrowRight />
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/pricing">Pricing</Link>
+              <Link href="/#pricing">Pricing</Link>
             </Button>
           </div>
         </article>

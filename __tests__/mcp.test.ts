@@ -66,10 +66,10 @@ describe("OAuth and redirects", () => {
 
   it("never redirects off-site after login", () => {
     expect(safeNextPath("/oauth/authorize?client_id=x")).toBe("/oauth/authorize?client_id=x");
-    expect(safeNextPath("//evil.example")).toBe("/chat");
-    expect(safeNextPath("/\\evil.example")).toBe("/chat");
-    expect(safeNextPath("https://evil.example")).toBe("/chat");
-    expect(safeNextPath(null)).toBe("/chat");
+    expect(safeNextPath("//evil.example")).toBe("/studies");
+    expect(safeNextPath("/\\evil.example")).toBe("/studies");
+    expect(safeNextPath("https://evil.example")).toBe("/studies");
+    expect(safeNextPath(null)).toBe("/studies");
   });
 });
 

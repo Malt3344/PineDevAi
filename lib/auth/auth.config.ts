@@ -1,5 +1,8 @@
 import type { NextAuthConfig } from "next-auth";
 
+/** Every route behind the sign-in wall (the (app) route group). */
+const APP_PREFIXES = ["/studies", "/connect", "/account"];
+
 /**
  * The edge-safe half of the Auth.js config — used by middleware.ts, which
  * runs in the Edge runtime and must not touch the database (no adapter, no
@@ -8,7 +11,7 @@ import type { NextAuthConfig } from "next-auth";
  * server components).
  *
  * The `authorized` callback is what middleware actually enforces, and it is
- * a UX convenience only: it redirects a signed-out visitor away from /chat
+ * a UX convenience only: it redirects a signed-out visitor away from the app
  * so they don't see a broken page, but every real page/route/action
  * independently re-validates via lib/gate.ts's getApprovedUser(), which also
  * checks the isApproved flag that this callback deliberately does not.
@@ -29,8 +32,9 @@ export const authConfig = {
   providers: [],
   callbacks: {
     authorized({ auth, request }) {
-      const isOnChat = request.nextUrl.pathname.startsWith("/chat");
-      if (!isOnChat) return true;
+      const path = request.nextUrl.pathname;
+      const isInApp = APP_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+      if (!isInApp) return true;
       return Boolean(auth?.user);
     },
   },

@@ -22,7 +22,7 @@ export type StudySummary = {
   incubationStatus: "on_track" | "below_band" | "broken" | null;
 };
 
-export type ProtocolRecord = ProtocolInput & { chatId: string };
+export type ProtocolRecord = ProtocolInput & { chatId: string; script: string | null };
 
 type Database = typeof Db;
 
@@ -40,6 +40,7 @@ function toInput(row: typeof protocols.$inferSelect): ProtocolRecord {
     amendments: row.amendments,
     inSampleAttempts: row.inSampleAttempts,
     oosAttempts: row.oosAttempts,
+    script: row.script,
   };
 }
 
@@ -83,8 +84,13 @@ export async function listRuns(db: Database, chatId: string): Promise<RunInput[]
   }));
 }
 
-/** Whether the agent has written this study a strategy script yet. */
-export async function studyHasScript(db: Database, chatId: string): Promise<boolean> {
+/**
+ * The study's current Pine script. Saved on the protocol row by the
+ * connected Claude; studies from before that lived in the old in-app chat,
+ * so their last fenced script is read from its messages instead.
+ */
+async function studyScript(db: Database, chatId: string, saved: string | null): Promise<string | null> {
+  if (saved) return saved;
   const rows = await db
     .select({ parts: messages.parts })
     .from(messages)
@@ -95,18 +101,20 @@ export async function studyHasScript(db: Database, chatId: string): Promise<bool
       .map((p) => p.text)
       .join("\n"),
   );
-  return extractLatestCodeBlock(texts) !== null;
+  return extractLatestCodeBlock(texts);
 }
 
-export type LoadedStudy = { protocol: ProtocolRecord; runs: RunInput[]; analysis: StudyAnalysis };
+export type LoadedStudy = {
+  protocol: ProtocolRecord;
+  runs: RunInput[];
+  script: string | null;
+  analysis: StudyAnalysis;
+};
 
 export async function loadStudy(db: Database, chatId: string, userId: string): Promise<LoadedStudy> {
-  const [protocol, runs, hasScript] = await Promise.all([
-    getOrCreateProtocol(db, chatId, userId),
-    listRuns(db, chatId),
-    studyHasScript(db, chatId),
-  ]);
-  return { protocol, runs, analysis: analyzeStudy(protocol, runs, hasScript) };
+  const [protocol, runs] = await Promise.all([getOrCreateProtocol(db, chatId, userId), listRuns(db, chatId)]);
+  const script = await studyScript(db, chatId, protocol.script);
+  return { protocol, runs, script, analysis: analyzeStudy(protocol, runs, script !== null) };
 }
 
 export function summarize(analysis: StudyAnalysis): StudySummary {

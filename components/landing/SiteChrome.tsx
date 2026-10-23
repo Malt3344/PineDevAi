@@ -20,13 +20,13 @@ export function SiteHeader() {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
         <Wordmark />
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground sm:flex">
-          <Link href="/#protocol" className="hover:text-foreground">
-            Protocol
+          <Link href="/#how" className="hover:text-foreground">
+            How it works
           </Link>
           <Link href="/methodology" className="hover:text-foreground">
             Methodology
           </Link>
-          <Link href="/pricing" className="hover:text-foreground">
+          <Link href="/#pricing" className="hover:text-foreground">
             Pricing
           </Link>
         </nav>
@@ -35,7 +35,7 @@ export function SiteHeader() {
             <Link href="/login">Log in</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link href="/login?mode=sign-up">Get started</Link>
+            <Link href={`/login?mode=sign-up&callbackUrl=${encodeURIComponent("/connect")}`}>Get started</Link>
           </Button>
         </div>
       </div>
@@ -50,15 +50,15 @@ export function SiteFooter() {
         <div>
           <Wordmark />
           <p className="mt-2 text-xs text-muted-foreground">
-            Strategy validation for retail traders. Built on TradingView Pine Script v6.
+            Validate TradingView strategies like a quant — from your own Claude.
           </p>
         </div>
         <div>
           <p className="text-xs font-medium text-foreground">Product</p>
           <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
             <li>
-              <Link href="/#protocol" className="hover:text-foreground">
-                The protocol
+              <Link href="/#how" className="hover:text-foreground">
+                How it works
               </Link>
             </li>
             <li>
@@ -67,7 +67,7 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/pricing" className="hover:text-foreground">
+              <Link href="/#pricing" className="hover:text-foreground">
                 Pricing
               </Link>
             </li>
