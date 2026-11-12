@@ -4,6 +4,7 @@ import { hash } from "bcrypt-ts";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
+import { isTeamEmail } from "@/lib/access";
 
 export type RegisterResult = { ok: true } | { ok: false; error: string };
 
@@ -15,6 +16,12 @@ export type RegisterResult = { ok: true } | { ok: false; error: string };
  */
 export async function registerAction(email: string, password: string): Promise<RegisterResult> {
   const normalizedEmail = email.toLowerCase().trim();
+
+  // Invitation only: an address that is not on the team allowlist never
+  // gets an account, whatever it types here.
+  if (!isTeamEmail(normalizedEmail)) {
+    return { ok: false, error: "Access is by invitation only." };
+  }
 
   const [existing] = await db
     .select({ id: users.id })

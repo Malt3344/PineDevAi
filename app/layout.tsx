@@ -16,9 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PineDev — validate your strategy like a quant",
-  description:
-    "Connect your Claude, describe your trading idea, and get a professional quant verdict on your TradingView Pine Script v6 strategy.",
+  title: "PineDev",
+  description: "Systematic strategies, built and deployed for a select few.",
 };
 
 export default function RootLayout({

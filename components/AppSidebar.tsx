@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, FlaskConical, LayoutList, LogOut, Plug, Settings } from "lucide-react";
+import { LayoutList, LogOut, Plug, Settings } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { signOutAction } from "@/app/(app)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarStudies, type SidebarStudy } from "@/components/sidebar-studies";
@@ -47,12 +48,10 @@ export function AppSidebar({ studies, userEmail }: { studies: SidebarStudy[]; us
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/studies">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <FlaskConical className="size-4" />
-                </div>
+                <LogoMark size={32} className="rounded-lg" />
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold">PineDev</span>
-                  <span className="truncate text-xs text-muted-foreground">Strategy validation</span>
+                  <span className="truncate text-xs text-muted-foreground">Research platform</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -100,12 +99,6 @@ export function AppSidebar({ studies, userEmail }: { studies: SidebarStudy[]; us
                   <Link href="/account">
                     <Settings />
                     Account
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/account/billing">
-                    <CreditCard />
-                    Billing
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

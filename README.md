@@ -1,8 +1,11 @@
 # PineDev
 
-Validate a TradingView strategy like a quant, from your own Claude.
+PineDev develops and deploys systematic trading strategies, privately, for funds and professional traders.
 
-Users sign up, connect their own Claude (desktop app, claude.ai or Claude Code) once, and describe a trading idea. Claude runs the protocol on the user's own Claude plan; PineDev stores each idea as a **study** and shows the report. PineDev never handles a Claude login or key, which keeps it within Anthropic's terms.
+This repo is two things:
+
+- **The public site** — one deliberately minimal page with an enquiry form (`app/apply/actions.ts`). Enquiries are emailed to hello@pinedev.com once `RESEND_API_KEY` is set; until then they are written to the server log.
+- **The internal research platform** — invitation only (`TEAM_EMAILS`, see `lib/access.ts`). Team members connect their own Claude (desktop app, claude.ai or Claude Code) once; Claude runs the validation protocol, and PineDev stores each strategy as a **study** and shows the report. PineDev never handles a Claude login or key, which keeps it within Anthropic's terms.
 
 The protocol, in seven stages:
 
@@ -14,7 +17,6 @@ The protocol, in seven stages:
 6. **Verdict**: every pre-registered criterion scored (Validated / Promising / Fragile / Rejected).
 7. **Incubation**: forward trades plotted against the band the in-sample trades predict.
 
-The formulas are documented on the public `/methodology` page.
 
 ## How Claude connects
 
@@ -36,7 +38,6 @@ The formulas are documented on the public `/methodology` page.
 app/
   page.tsx                landing page
   login/                  sign-in, sign-up, Google
-  methodology/            public description of every test
   oauth/authorize/        the "Connect Claude" consent screen
   (app)/                  signed-in shell: studies, studies/[id] report, connect, account
   api/mcp/                MCP endpoint for the user's Claude

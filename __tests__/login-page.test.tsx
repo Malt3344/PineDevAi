@@ -26,7 +26,9 @@ describe("LoginPage default mode", () => {
     render(<LoginPage />);
 
     expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
-    expect(screen.getByText(/new here\?/i)).toBeInTheDocument();
+    // Invitation only: no public sign-up link, just the way to apply.
+    expect(screen.queryByText(/create an account/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /make an enquiry/i })).toHaveAttribute("href", "/");
   });
 
   it("starts in sign-up mode when the link explicitly asks for it (?mode=sign-up)", () => {

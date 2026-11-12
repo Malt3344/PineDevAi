@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { registerAction } from "./actions";
 import { safeNextPath } from "@/lib/safe-redirect";
+import { Logo } from "@/components/Logo";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
@@ -16,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const SUPPORT_EMAIL = "hello@pinedev.app";
+const SUPPORT_EMAIL = "hello@pinedev.com";
 
 type Status = "idle" | "loading" | "error";
 type Mode = "sign-in" | "sign-up" | "forgot-password";
@@ -47,8 +48,8 @@ function GoogleIcon() {
 /** The "PineDev" wordmark, always a link back to the landing page. */
 function Wordmark() {
   return (
-    <Link href="/" className="mb-10 block text-center text-lg font-semibold tracking-tight">
-      PineDev
+    <Link href="/" className="mb-10 flex justify-center">
+      <Logo size={32} className="text-lg" />
     </Link>
   );
 }
@@ -159,8 +160,8 @@ function LoginForm() {
                   </h1>
                   <p className="text-sm text-balance text-muted-foreground">
                     {mode === "sign-up"
-                      ? "Describe a strategy and get working Pine Script v6 back."
-                      : "Sign in to pick up where you left off."}
+                      ? "For invited team members. Use the address you were invited with."
+                      : "Team access only."}
                   </p>
                 </div>
 
@@ -233,37 +234,42 @@ function LoginForm() {
                   </Button>
                 </Field>
 
-                <p className="text-center text-sm text-muted-foreground">
-                  {mode === "sign-up" ? "Already have an account?" : "New here?"}{" "}
-                  <button
-                    type="button"
-                    onClick={() => setMode(mode === "sign-up" ? "sign-in" : "sign-up")}
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                  >
-                    {mode === "sign-up" ? "Sign in" : "Create an account"}
-                  </button>
-                </p>
+                {/* No public sign-up link: accounts are by invitation, and an
+                    invited address reaches sign-up through ?mode=sign-up. */}
+                {mode === "sign-up" ? (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      onClick={() => setMode("sign-in")}
+                      className="font-medium text-foreground underline-offset-4 hover:underline"
+                    >
+                      Sign in
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground">
+                    Not a client?{" "}
+                    <Link href="/" className="font-medium text-foreground underline-offset-4 hover:underline">
+                      Make an enquiry
+                    </Link>
+                  </p>
+                )}
               </FieldGroup>
             </form>
 
             {/* Hidden on phones, where it would only push the form below
                 the fold. */}
             <div className="hidden flex-col justify-between bg-surface-raised p-8 md:flex">
-              <Link href="/" className="text-sm font-semibold tracking-tight">
-                PineDev
+              <Link href="/">
+                <Logo />
               </Link>
               <div>
                 <p className="text-xl font-semibold tracking-tight text-balance">
-                  Validate your strategy like a quant.
-                </p>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                  Connect your Claude, describe your idea, and get an honest,
-                  professional verdict on your TradingView strategy.
+                  Systematic strategies, built and deployed for a select few.
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Works with Claude Pro and Max — desktop app, claude.ai or Claude Code.
-              </p>
+              <p className="text-xs text-muted-foreground">Team access only.</p>
             </div>
           </CardContent>
         </Card>

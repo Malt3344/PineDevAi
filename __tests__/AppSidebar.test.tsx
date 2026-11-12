@@ -12,16 +12,11 @@ vi.mock("@/app/(app)/actions", () => ({
   deleteStudy: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/account/billing/actions", () => ({
-  startCheckoutAction: vi.fn(),
-  openBillingPortalAction: vi.fn(),
-}));
-
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 describe("AppSidebar", () => {
-  it("has the two destinations and the user's studies", () => {
+  it("has the team's destinations and the user's studies", () => {
     render(
       <SidebarProvider>
         <AppSidebar studies={[{ id: "c1", title: "My strategy", createdAt: new Date() }]} userEmail="t@example.com" />
@@ -56,7 +51,7 @@ describe("AppSidebar", () => {
     await user.click(screen.getByText("test@example.com"));
 
     expect(await screen.findByText("Account")).toBeInTheDocument();
-    expect(screen.getByText("Billing")).toBeInTheDocument();
+    expect(screen.queryByText("Billing")).not.toBeInTheDocument();
     expect(screen.getByText("Log out")).toBeInTheDocument();
   }, 30000);
 });

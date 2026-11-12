@@ -34,9 +34,10 @@ Run it again whenever a new file appears in `drizzle/`. Skipping one leaves the 
    ```
    Anyone with this value can forge session tokens, so use a different one in production than in local dev.
 3. Put your Postgres connection string (from step 1) in `DATABASE_URL`.
-4. No AI key is needed: users bring their own Claude.
-5. Leave `NEXT_PUBLIC_SITE_URL` as `http://localhost:3000` for local development.
-6. Leave `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and the `STRIPE_*` variables blank for now if you don't want Google sign-in or billing yet — the app runs fine without them; the Google button on `/login` and the "Upgrade" button on the Billing page just stay disabled.
+4. Put the team's email addresses in `TEAM_EMAILS` (comma-separated; `@yourdomain.com` allows a whole domain). Only these addresses can create an account or sign in — with it empty, nobody can. Invited team members sign up at `/login?mode=sign-up`.
+5. No AI key is needed: the team uses their own Claude.
+6. Leave `NEXT_PUBLIC_SITE_URL` as `http://localhost:3000` for local development.
+7. Leave `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` and the `STRIPE_*` variables blank for now if you don't want Google sign-in or billing yet — the app runs fine without them; the Google button on `/login` and the "Upgrade" button on the Billing page just stay disabled.
 
 ## 4. Enable Google sign-in (optional)
 

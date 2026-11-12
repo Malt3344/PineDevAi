@@ -4,11 +4,12 @@ import { getApprovedUser } from "@/lib/gate";
 import { db } from "@/lib/db/client";
 import { chats } from "@/lib/db/schema";
 import { AppSidebar } from "@/components/AppSidebar";
+import { Logo } from "@/components/Logo";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { signOutAction } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
 
-const SUPPORT_EMAIL = "hello@pinedev.app";
+const SUPPORT_EMAIL = "hello@pinedev.com";
 
 export default async function AppLayout({
   children,
@@ -24,17 +25,15 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  // Signing up is instant for everyone — there is no manual approval queue.
-  // Reaching this branch means an admin has specifically suspended the
-  // account (see lib/db/schema.ts's isApproved column), so this reads as a
-  // suspension notice, not a "please wait" screen, and offers no way to pay
-  // past it — paying for the paid plan is unrelated to this flag.
+  // The platform is internal: reaching this branch means the account is
+  // not on the team allowlist (lib/access.ts) or has been suspended by hand
+  // (lib/db/schema.ts's isApproved column).
   if (gate.status === "unapproved") {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
-        <h1 className="text-lg font-medium">This account is suspended</h1>
+        <h1 className="text-lg font-medium">This account doesn&apos;t have access</h1>
         <p className="mt-3 max-w-sm text-sm text-muted-foreground">
-          If you think this is a mistake, email{" "}
+          The PineDev platform is for our team only. If you think this is a mistake, email{" "}
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
             className="text-foreground underline underline-offset-4"
@@ -75,7 +74,7 @@ export default async function AppLayout({
         {/* Phones only: the rail is a sheet there, and this opens it. */}
         <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3 md:hidden">
           <SidebarTrigger />
-          <span className="text-sm font-semibold tracking-tight">PineDev</span>
+          <Logo size={24} />
         </div>
         {children}
       </SidebarInset>

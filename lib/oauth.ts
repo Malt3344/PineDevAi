@@ -4,6 +4,7 @@ import type { db as Db } from "@/lib/db/client";
 import { oauthClients, oauthCodes, oauthTokens, uploadTokens, users } from "@/lib/db/schema";
 import type { RunStage } from "@/lib/quant/protocol";
 import { getSiteUrl } from "@/lib/site-url";
+import { isTeamEmail } from "@/lib/access";
 
 /**
  * PineDev as an OAuth 2.1 authorization server for its own MCP endpoint —
@@ -221,7 +222,7 @@ export async function userForAccessToken(
         gt(oauthTokens.expiresAt, new Date()),
       ),
     );
-  if (!row || !row.isApproved) return null;
+  if (!row || !row.isApproved || !isTeamEmail(row.email)) return null;
   await db.update(oauthTokens).set({ lastUsedAt: new Date() }).where(eq(oauthTokens.tokenHash, hash));
   return { id: row.userId, email: row.email };
 }

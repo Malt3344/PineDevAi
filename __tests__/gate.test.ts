@@ -19,6 +19,8 @@ vi.mock("@/lib/db/client", () => ({
 
 import { getApprovedUser } from "@/lib/gate";
 
+process.env.TEAM_EMAILS = "a@b.com";
+
 describe("getApprovedUser", () => {
   it("returns the approved user when logged in and approved", async () => {
     mockAuth.mockResolvedValue({ user: { id: "u1", email: "a@b.com" } });
@@ -64,5 +66,12 @@ describe("getApprovedUser", () => {
     const result = await getApprovedUser();
 
     expect(result.status).toBe("unauthenticated");
+  });
+
+  it("denies an approved account whose email is not on the team allowlist", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "u2", email: "stranger@example.com" } });
+    mockWhere.mockResolvedValue([{ isApproved: true, subscriptionStatus: "free" }]);
+
+    expect((await getApprovedUser()).status).toBe("unapproved");
   });
 });

@@ -3,7 +3,7 @@
   "description": "PineDev — validate TradingView Pine Script v6 strategies the way quants do.",
   "owner": {
     "name": "PineDev",
-    "email": "hello@pinedev.app"
+    "email": "hello@pinedev.com"
   },
   "plugins": [
     {

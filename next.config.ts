@@ -14,7 +14,8 @@ const nextConfig: NextConfig = {
       { source: "/chat/account/:path*", destination: "/account/:path*", permanent: true },
       { source: "/chat/strategies", destination: "/studies", permanent: true },
       { source: "/chat/:id", destination: "/studies/:id", permanent: true },
-      { source: "/pricing", destination: "/#pricing", permanent: true },
+      { source: "/pricing", destination: "/", permanent: true },
+      { source: "/methodology", destination: "/", permanent: true },
       { source: "/share/:id", destination: "/", permanent: false },
     ];
   },

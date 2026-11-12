@@ -7,6 +7,7 @@ import Google from "next-auth/providers/google";
 import { db } from "@/lib/db/client";
 import { accounts, sessions, users, verificationTokens } from "@/lib/db/schema";
 import { authConfig } from "./auth.config";
+import { isTeamEmail } from "@/lib/access";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -49,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // No matching user, or a Google-only account with no password set.
         if (!user || !user.passwordHash) return null;
+        if (!isTeamEmail(user.email)) return null;
 
         const passwordMatches = await compare(password, user.passwordHash);
         if (!passwordMatches) return null;
@@ -59,6 +61,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     ...authConfig.callbacks,
+    // Runs before an account is created or linked, for every provider —
+    // this is what stops a stranger's Google sign-in from creating a user.
+    signIn({ user }) {
+      return isTeamEmail(user.email);
+    },
     async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;

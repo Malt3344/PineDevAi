@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
+import { isTeamEmail } from "@/lib/access";
 
 export type SubscriptionStatus = "free" | "active" | "past_due" | "canceled";
 
@@ -48,7 +49,9 @@ export async function getApprovedUser(): Promise<GateResult> {
     subscriptionStatus: user?.subscriptionStatus ?? "free",
   };
 
-  if (!user?.isApproved) {
+  // Removing someone from TEAM_EMAILS locks them out on their next request,
+  // even with a session that is still valid.
+  if (!user?.isApproved || !isTeamEmail(sessionUser.email)) {
     return { status: "unapproved", user: approvedUser };
   }
 

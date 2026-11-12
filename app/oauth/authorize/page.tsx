@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { FlaskConical, FolderKanban, FileCode, Upload, ShieldCheck } from "lucide-react";
+import { FolderKanban, FileCode, Upload, ShieldCheck } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
 import { answerConsent } from "./actions";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db/client";
@@ -77,9 +78,7 @@ export default async function AuthorizePage({ searchParams }: { searchParams: Pr
   return (
     <Shell>
       <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <FlaskConical className="size-5" />
-        </span>
+        <LogoMark size={40} className="rounded-lg" />
         <div className="min-w-0">
           <h1 className="text-lg font-medium">Connect {client.name}</h1>
           <p className="truncate text-sm text-muted-foreground">to PineDev as {gate.user.email}</p>
